@@ -81,6 +81,8 @@ test.describe('territory: entry and the linear path', () => {
     await expect(advance).toHaveCount(1)
     await expect(back).toHaveCount(1)
     await expect(back).toBeDisabled()
+    // Hidden places do not exist in the DOM.
+    await expect(page.locator('.place')).toHaveCount(0)
 
     for (const n of canon.movements[0]!.fragments) {
       await page.keyboard.press('ArrowRight')
@@ -91,9 +93,10 @@ test.describe('territory: entry and the linear path', () => {
       await expect(place.locator('[data-seal]')).toHaveText(canon.fragments[n - 1]!.seal)
       // Focus moved to the text for assistive tech.
       expect(await page.evaluate(() => document.activeElement?.getAttribute('data-n'))).toBe(String(n))
-      // Hidden places are not in the DOM.
-      const mounted = await page.locator('.place').count()
-      expect(mounted).toBeLessThanOrEqual(n)
+      // Whatever is mounted is emerging, present or found: never a hidden place.
+      for (const state of await page.locator('.place').evaluateAll((els) => els.map((el) => el.getAttribute('data-state')))) {
+        expect(state).not.toBe('hidden')
+      }
     }
     // Threshold: four inked impressions, in order, nothing blind.
     await page.keyboard.press('ArrowRight')
@@ -229,11 +232,28 @@ test.describe('territory: touch', () => {
       t.glideTo({ x: p.x + t.world.short * 0.4, y: p.y })
     })
     await expect(page.locator('.place[data-n="3"]')).toHaveAttribute('data-state', 'present', { timeout: 5000 })
-    await page.evaluate(() => {
+    const farFrom3 = () => {
       const t = window.__codice!.territory!.territory
       const p = t.world.places.find((x) => x.n === 3)!
-      t.glideTo({ x: p.x + t.world.short * 2.5, y: p.y })
-    })
+      // The camera clamps to the world, so pick the reachable corner farthest from the place.
+      const corners = [
+        { x: 0, y: 0 },
+        { x: 1e6, y: 0 },
+        { x: 0, y: 1e6 },
+        { x: 1e6, y: 1e6 },
+      ]
+      let best = corners[0]!
+      let bestD = -1
+      for (const c of corners) {
+        const d = Math.hypot(Math.min(c.x, 1e6) - p.x, Math.min(c.y, 1e6) - p.y)
+        if (d > bestD) {
+          bestD = d
+          best = c
+        }
+      }
+      t.glideTo(best)
+    }
+    await page.evaluate(farFrom3)
     await expect(page.locator('.place[data-n="3"]')).toHaveCount(0, { timeout: 5000 })
     await page.evaluate(() => {
       const t = window.__codice!.territory!.territory
@@ -241,11 +261,7 @@ test.describe('territory: touch', () => {
       t.glideTo({ x: p.x, y: p.y })
     })
     await expect(page.locator('.place[data-n="3"]')).toHaveAttribute('data-state', 'found', { timeout: 5000 })
-    await page.evaluate(() => {
-      const t = window.__codice!.territory!.territory
-      const p = t.world.places.find((x) => x.n === 3)!
-      t.glideTo({ x: p.x + t.world.short * 2.5, y: p.y })
-    })
+    await page.evaluate(farFrom3)
     await page.waitForTimeout(1500)
     await expect(page.locator('.place[data-n="3"]')).toHaveAttribute('data-state', 'found')
   })
