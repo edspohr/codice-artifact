@@ -1,0 +1,193 @@
+/* ---------------------------------------------------------------------
+   The territory. One canvas (the ink field) under one DOM layer that holds
+   world-positioned text and seals. The layer receives the camera
+   transform every frame from the loop; React never renders per frame.
+   --------------------------------------------------------------------- */
+
+.territory {
+  position: relative;
+  width: 100%;
+  max-width: none;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--paper);
+  touch-action: pinch-zoom;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  cursor: default;
+}
+
+.territory .ink {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+}
+
+.world-text {
+  --sway-x: 0px;
+  --sway-r: 0deg;
+  --open: 0;
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  will-change: transform;
+  pointer-events: none;
+  opacity: var(--open);
+}
+
+/* --- places ---------------------------------------------------------------- */
+
+.place {
+  position: absolute;
+  width: min(30rem, 78vw);
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  transition: opacity var(--emerge-ms, 700ms) ease-out;
+}
+.place[data-state='emerging'],
+.place[data-state='present'],
+.place[data-state='found'] {
+  opacity: 1;
+}
+.place[data-state='dispersing'] {
+  opacity: 0;
+  transition-duration: var(--disperse-ms, 900ms);
+}
+
+.place__text {
+  position: relative;
+  transform: translate(var(--sway-x), 0) rotate(var(--sway-r));
+  transform-origin: 50% 100%;
+  outline: none;
+}
+.place__text .canon-line {
+  color: var(--ink);
+}
+
+.place__seal {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  margin-top: 0.8rem;
+  opacity: var(--pressure, 1);
+  animation: stamp var(--stamp-ms, 480ms) cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+@keyframes stamp {
+  0% {
+    opacity: 0;
+    scale: 1.35;
+  }
+  55% {
+    opacity: var(--pressure, 1);
+    scale: 0.96;
+  }
+  100% {
+    scale: 1;
+  }
+}
+
+/* --- the tally ------------------------------------------------------------- */
+
+.tally {
+  position: absolute;
+  display: flex;
+  gap: 0.9em;
+  transform: translate(-50%, -50%);
+  font-size: calc(var(--seal-size) * 0.8);
+}
+.tally .seal {
+  font-size: 1em;
+}
+
+.seal--blind {
+  background: transparent;
+  box-shadow:
+    inset 0 0 0 1px rgba(22, 22, 22, 0.14),
+    inset 1px 1px 2px rgba(255, 255, 255, 0.9),
+    inset -1px -1px 2px rgba(22, 22, 22, 0.08);
+}
+.seal--blind .seal__ink {
+  background: radial-gradient(60% 45% at 30% 35%, rgba(22, 22, 22, 0.05), transparent 70%);
+}
+
+/* --- titles ----------------------------------------------------------------- */
+
+.region-title {
+  position: absolute;
+  animation: title-in var(--title-fade-ms, 1400ms) ease-out both;
+}
+@keyframes title-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.region-title .movement-title {
+  position: static;
+  margin: 0;
+  font-family: var(--font-title);
+  font-size: var(--title-size);
+  line-height: 1.15;
+  text-transform: uppercase;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.region-title[data-movement='mar'] .movement-title {
+  font-weight: 300;
+  letter-spacing: 0.22em;
+}
+.region-title[data-movement='tierra'] {
+  transform: translate(-50%, 0);
+}
+.region-title[data-movement='tierra'] .movement-title {
+  font-weight: 900;
+  font-size: calc(var(--title-size) * 1.12);
+  letter-spacing: -0.03em;
+  word-spacing: 0.35em;
+  text-align: center;
+}
+.region-title[data-movement='tierra'] .movement-title > span:nth-child(2) .movement-title__word {
+  font-style: italic;
+}
+
+/* --- the epigraph ------------------------------------------------------------- */
+
+.epigraph-veil {
+  position: absolute;
+  inset: 0;
+  padding: calc(env(safe-area-inset-top, 0px) + 18vh) var(--gutter) 0;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 1.6s ease-in;
+}
+.territory[data-phase='territory'] .epigraph-veil {
+  opacity: 0;
+}
+
+/* --- motion ---------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .place,
+  .place[data-state='dispersing'] {
+    transition-duration: 150ms;
+  }
+  .place__seal {
+    animation: none;
+  }
+  .region-title {
+    animation-duration: 200ms;
+  }
+  .epigraph-veil {
+    transition-duration: 200ms;
+  }
+}

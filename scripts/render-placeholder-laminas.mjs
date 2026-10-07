@@ -120,8 +120,98 @@ async function render(file, register, seed, t) {
     .toFile(file)
 }
 
+// --- terrain (Phase 2): grounds and formations that blend into one field ---
+// A ground covers a whole region and fades to white at every edge. A
+// formation is a place's local ink with an irregular, soft mask: never a
+// radial blob, never a rectangle.
+
+const GROUND_W = 1024
+const GROUND_H = 2048
+const FORM_SIZE = 512
+
+function edgeFade(u, v, width) {
+  const fx = Math.min(smoothstep(0, width, u), smoothstep(0, width, 1 - u))
+  const fy = Math.min(smoothstep(0, width, v), smoothstep(0, width, 1 - v))
+  return fx * fy
+}
+
+const grounds = {
+  // Mar: ink dense low, void above; a nascent crack; everything fades at the edges.
+  mar(u, v, seed) {
+    const mass = smoothstep(0.5, 0.86, v)
+    const grain = fbm(u * 4 + 11, v * 7, seed, 6, 0.55)
+    const lift = fbm(u * 2.5, v * 1.5, seed + 3, 3, 0.5)
+    const vein = 1 - 0.6 * Math.exp(-Math.pow((u - 0.5 - 0.15 * fbm(v * 2, 0, seed + 7, 3, 0.5)) * 12, 2)) * smoothstep(0.6, 0.95, v)
+    return Math.min(1, 0.82 * mass * (0.4 + 0.6 * grain) * (0.65 + 0.5 * lift) * vein) * edgeFade(u, v, 0.08)
+  },
+}
+
+function irregularMask(u, v, seed) {
+  const dx = u - 0.5
+  const dy = v - 0.5
+  const angle = Math.atan2(dy, dx)
+  const r = Math.hypot(dx, dy) * 2 // 0 at centre, 1 at the edge of the inscribed circle
+  // The boundary wobbles with angle and with position: no circle survives this.
+  const wobble = 0.55 + 0.45 * fbm(Math.cos(angle) * 1.5 + 5, Math.sin(angle) * 1.5 + 5, seed, 3, 0.5)
+  const bite = 0.75 + 0.5 * fbm(u * 3, v * 3, seed + 19, 3, 0.5)
+  const radius = 0.86 * wobble * bite
+  return 1 - smoothstep(radius * 0.45, radius, r)
+}
+
+function formation(register, u, v, seed, t) {
+  const mask = irregularMask(u, v, seed)
+  const base = registers[register](u, 0.35 + v * 0.45, seed, t)
+  const grain = fbm(u * 6, v * 6, seed + 41, 5, 0.5)
+  return Math.min(1, mask * (0.5 + 0.8 * base) * (0.55 + 0.45 * grain))
+}
+
+async function renderGround(file, register, seed) {
+  const buf = Buffer.alloc(GROUND_W * GROUND_H)
+  for (let y = 0; y < GROUND_H; y++) {
+    const v = y / GROUND_H
+    for (let x = 0; x < GROUND_W; x++) {
+      const u = x / GROUND_W
+      const ink = Math.max(0, Math.min(1, grounds[register](u, v, seed)))
+      buf[y * GROUND_W + x] = Math.round(255 * (1 - 0.92 * ink))
+    }
+  }
+  await sharp(buf, { raw: { width: GROUND_W, height: GROUND_H, channels: 1 } }).webp({ quality: 70, effort: 4 }).toFile(file)
+}
+
+async function renderFormation(file, register, seed, t) {
+  const buf = Buffer.alloc(FORM_SIZE * FORM_SIZE)
+  for (let y = 0; y < FORM_SIZE; y++) {
+    const v = y / FORM_SIZE
+    for (let x = 0; x < FORM_SIZE; x++) {
+      const u = x / FORM_SIZE
+      const ink = Math.max(0, Math.min(1, formation(register, u, v, seed, t)))
+      buf[y * FORM_SIZE + x] = Math.round(255 * (1 - 0.92 * ink))
+    }
+  }
+  await sharp(buf, { raw: { width: FORM_SIZE, height: FORM_SIZE, channels: 1 } }).webp({ quality: 70, effort: 4 }).toFile(file)
+}
+
 async function main() {
   mkdirSync(outDir, { recursive: true })
+  mkdirSync(resolve(outDir, 'terrain'), { recursive: true })
+  const terrainJobs = []
+  for (const m of canon.movements) {
+    if (!grounds[m.id]) continue
+    terrainJobs.push({ file: resolve(outDir, `terrain/ground-${m.id}.webp`), run: (f) => renderGround(f, m.id, movementSeeds[m.id] + 500) })
+  }
+  for (const f of canon.fragments) {
+    const m = canon.movements.find((x) => x.id === f.movement)
+    const i = m.fragments.indexOf(f.n)
+    const t = m.fragments.length > 1 ? i / (m.fragments.length - 1) : 0.5
+    terrainJobs.push({ file: resolve(outDir, `terrain/formation-${f.n}.webp`), run: (file) => renderFormation(file, f.movement, movementSeeds[f.movement] + 2000 + f.n, t) })
+  }
+  const pendingTerrain = force ? terrainJobs : terrainJobs.filter((j) => !existsSync(j.file))
+  if (pendingTerrain.length) {
+    const started = Date.now()
+    for (const job of pendingTerrain) await job.run(job.file)
+    console.log(`Rendered ${pendingTerrain.length} terrain placeholders in ${Date.now() - started} ms → public/laminas/placeholder/terrain/`)
+  }
+
   const jobs = []
   for (const m of canon.movements) {
     jobs.push({ file: resolve(outDir, `mother-${m.id}.webp`), register: m.id, seed: movementSeeds[m.id], t: 0.5 })
