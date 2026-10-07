@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-ssr/
+*.local
+
+# Generated placeholder láminas (rendered at build time)
+public/laminas/placeholder/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*-service-account*.json
+serviceAccountKey*.json
+*.pem
+*.key
+
+# Firebase / emulators
+.firebase/
+firebase-debug.log*
+firestore-debug.log*
+ui-debug.log*
+pubsub-debug.log*
+emulator-data/
+.emulator-data/
+
+# Test artifacts
+coverage/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# Editors / OS
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
