@@ -1,0 +1,44 @@
+/* Design tokens. Monochrome: greys of ink on white. Everything that the
+   author will tune in the browser is a custom property here. */
+
+:root {
+  --ink: #161616;
+  --ink-2: #4a4a4a;
+  --ink-3: #8c8c8c;
+  --paper: #fcfcfc;
+  --paper-near: #f4f4f4;
+
+  --font-body: 'Spectral', Georgia, 'Times New Roman', serif;
+  --font-title: 'Archivo', 'Helvetica Neue', Arial, sans-serif;
+
+  /* Sizes are rem-based so the system font size is respected. */
+  --body-size: clamp(1rem, 0.92rem + 0.45vw, 1.2rem);
+  --body-lh: 1.72;
+  --title-size: clamp(1.45rem, 6.2vw, 2.4rem);
+  --seal-size: clamp(1.4rem, 5.5vw, 1.9rem);
+
+  --stage-max-w: 34rem;
+  --gutter: clamp(1.25rem, 6vw, 2.25rem);
+  --seal-band-h: clamp(6.5rem, 16vh, 9rem);
+  --text-max-w: 30rem;
+
+  /* Body text floats high in Mar and descends movement by movement. */
+  --text-descent: 6vh;
+
+  /* Cielo's title: Thin 100 by default; switch to 300 if it breaks on small screens. */
+  --cielo-title-weight: 100;
+  --cielo-title-weight-2: 300;
+}
+
+[data-movement='mar'] {
+  --text-descent: 5vh;
+}
+[data-movement='tierra'] {
+  --text-descent: 10vh;
+}
+[data-movement='cordillera'] {
+  --text-descent: 16vh;
+}
+[data-movement='cielo'] {
+  --text-descent: 22vh;
+}

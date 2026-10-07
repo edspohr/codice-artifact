@@ -1,0 +1,395 @@
+/* ---------------------------------------------------------------------
+   Stage: the whole piece. A portrait column, full height, centred on wide
+   screens. Transitions are driven by --progress (0..1), written by the
+   gesture engine, and by data-gesture on the stage.
+   --------------------------------------------------------------------- */
+
+.stage {
+  --progress: 0;
+  position: relative;
+  width: 100%;
+  max-width: var(--stage-max-w);
+  height: 100vh;
+  height: 100dvh;
+  margin: 0 auto;
+  overflow: hidden;
+  background: var(--paper);
+  touch-action: pinch-zoom;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  cursor: default;
+}
+
+.view {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  padding: calc(env(safe-area-inset-top, 0px) + var(--text-descent)) var(--gutter) 0;
+  background: var(--paper);
+  outline: none;
+  will-change: transform, opacity;
+}
+
+.view--next {
+  pointer-events: none;
+}
+
+/* --- transitions per gesture -------------------------------------------- */
+
+[data-gesture='drift'] .view--current {
+  transform: translate3d(calc(var(--progress) * -100%), 0, 0);
+}
+[data-gesture='drift'] .view--next {
+  transform: translate3d(calc((1 - var(--progress)) * 100%), 0, 0);
+}
+
+[data-gesture='pull'] .view--current {
+  transform: translate3d(0, calc(var(--progress) * -100%), 0);
+}
+[data-gesture='pull'] .view--next {
+  transform: translate3d(0, calc((1 - var(--progress)) * 100%), 0);
+}
+
+[data-gesture='fracture'] .view--current {
+  /* Intact while the cracks grow; it only gives way on commit. */
+  transform: translate3d(calc(var(--progress) * -0.6%), calc(var(--progress) * 0.3%), 0);
+}
+[data-gesture='fracture'][data-settling] .view--current {
+  transition:
+    transform 0.45s cubic-bezier(0.4, 0, 0.9, 0.3),
+    opacity 0.45s ease-in;
+  transform: translate3d(-4%, 2.5%, 0) skewY(-2deg);
+  opacity: 0;
+}
+
+[data-gesture='tap'] .view--current,
+[data-gesture='stillness'] .view--current,
+[data-gesture='auto'] .view--current,
+[data-gesture='seal'] .view--current {
+  opacity: calc(1 - var(--progress));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage .view--current {
+    transform: none;
+    transition: none;
+    opacity: calc(1 - var(--progress));
+  }
+  .stage .view--next {
+    transform: none;
+  }
+  .stall-cue {
+    animation: none !important;
+    opacity: 0.6;
+  }
+}
+
+/* --- canon text ----------------------------------------------------------- */
+
+.canon-line {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: var(--body-size);
+  line-height: var(--body-lh);
+  letter-spacing: 0;
+  text-align: left;
+  text-transform: none;
+  hyphens: manual;
+  -webkit-hyphens: manual;
+  overflow-wrap: break-word;
+  max-width: var(--text-max-w);
+}
+
+/* --- epigraph --------------------------------------------------------------- */
+
+.view--epigraph {
+  --text-descent: 18vh;
+}
+
+/* --- divider ---------------------------------------------------------------- */
+
+.view--divider {
+  padding: 0;
+}
+
+.divider__lamina {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+.movement-title {
+  position: absolute;
+  margin: 0;
+  font-family: var(--font-title);
+  font-size: var(--title-size);
+  font-weight: 400;
+  line-height: 1.15;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+[data-movement='mar'] .movement-title {
+  top: calc(env(safe-area-inset-top, 0px) + 9vh);
+  left: var(--gutter);
+  right: var(--gutter);
+  text-align: left;
+  font-weight: 300;
+  letter-spacing: 0.22em;
+}
+
+[data-movement='tierra'] .movement-title {
+  top: calc(env(safe-area-inset-top, 0px) + 9vh);
+  left: var(--gutter);
+  right: var(--gutter);
+  text-align: center;
+  font-weight: 900;
+  font-size: calc(var(--title-size) * 1.12);
+  letter-spacing: -0.03em;
+  word-spacing: 0.35em;
+}
+[data-movement='tierra'] .movement-title__word:nth-of-type(1) {
+  font-style: normal;
+}
+[data-movement='tierra'] .movement-title > span:nth-child(2) .movement-title__word {
+  font-style: italic;
+}
+
+[data-movement='cordillera'] .movement-title {
+  bottom: calc(env(safe-area-inset-bottom, 0px) + var(--seal-band-h));
+  left: var(--gutter);
+  right: var(--gutter);
+  text-align: center;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+}
+[data-movement='cordillera'] .movement-title__word {
+  display: block;
+}
+
+[data-movement='cielo'] .movement-title {
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 12vh);
+  left: var(--gutter);
+  right: var(--gutter);
+  text-align: left;
+  font-weight: var(--cielo-title-weight);
+  letter-spacing: 0.32em;
+}
+[data-movement='cielo'] .movement-title > span:nth-child(2) .movement-title__word {
+  font-weight: var(--cielo-title-weight-2);
+  letter-spacing: 0.22em;
+}
+
+/* --- fragment ---------------------------------------------------------------- */
+
+.fragment__text {
+  flex: 0 0 auto;
+}
+
+.fragment__lamina {
+  flex: 1 1 auto;
+  min-height: 3.5rem;
+  margin: 1.5rem calc(-1 * var(--gutter)) 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.fragment__lamina-img {
+  height: 100%;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.seal-band {
+  flex: 0 0 auto;
+  height: var(--seal-band-h);
+  margin: 0 calc(-1 * var(--gutter));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* --- the seal ------------------------------------------------------------------- */
+
+.seal {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.4em;
+  height: 4.25em;
+  font-size: var(--seal-size);
+  background: var(--ink);
+  /* Imperfect, hand-stamped edge: a fixed jagged polygon, no filters. */
+  clip-path: polygon(
+    1.2% 2.4%, 9% 0.6%, 17% 1.9%, 28% 0.2%, 41% 1.6%, 52% 0.4%, 63% 1.8%, 75% 0.1%, 88% 1.5%, 98.6% 0.9%,
+    99.4% 10%, 98.2% 20%, 99.8% 31%, 98.6% 43%, 99.6% 55%, 98.1% 66%, 99.7% 78%, 98.4% 90%, 99.1% 98.8%,
+    90% 99.6%, 79% 98.2%, 67% 99.8%, 55% 98.4%, 44% 99.7%, 33% 98.3%, 21% 99.5%, 10% 98.1%, 0.8% 99.3%,
+    0.2% 89%, 1.7% 77%, 0.3% 65%, 1.9% 54%, 0.4% 42%, 1.6% 30%, 0.1% 19%, 1.4% 9%
+  );
+}
+
+.seal__ink {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  /* Uneven pressure: a few lighter patches of thinner ink. */
+  background:
+    radial-gradient(60% 45% at 28% 32%, rgba(252, 252, 252, 0.16), transparent 70%),
+    radial-gradient(45% 35% at 78% 72%, rgba(252, 252, 252, 0.12), transparent 70%),
+    radial-gradient(30% 25% at 62% 18%, rgba(252, 252, 252, 0.09), transparent 70%),
+    linear-gradient(160deg, rgba(252, 252, 252, 0.06), transparent 55%);
+}
+
+.seal__numeral {
+  position: relative;
+  font-family: var(--font-title);
+  font-weight: 600;
+  font-size: 1em;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: var(--paper);
+  text-transform: uppercase;
+}
+
+/* --- the return ------------------------------------------------------------------ */
+
+.view--dissolution {
+  background: var(--paper);
+}
+
+.view--reprise {
+  --text-descent: 26vh;
+}
+.reprise .canon-line {
+  font-style: italic;
+}
+
+.view--seal {
+  background: var(--paper-near);
+  padding: 0;
+  align-items: center;
+  justify-content: center;
+}
+
+.seal-alone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.seal-button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 1.5rem;
+  margin: 0;
+  cursor: pointer;
+  touch-action: manipulation;
+  border-radius: 0;
+}
+.seal-button:focus-visible {
+  outline: 1px solid var(--ink);
+  outline-offset: 0.5rem;
+}
+
+/* --- colofón (stub) ------------------------------------------------------------- */
+
+.view--colofon {
+  --text-descent: 10vh;
+  overflow-y: auto;
+  touch-action: pan-y pinch-zoom;
+}
+.colofon {
+  max-width: var(--text-max-w);
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 3rem);
+}
+.colofon p {
+  margin: 0 0 1.2em;
+}
+.colofon__heading {
+  font-family: var(--font-title);
+  font-weight: 300;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+}
+
+/* --- fracture overlay (Tierra) -------------------------------------------------- */
+
+.fracture-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  mix-blend-mode: multiply;
+  opacity: calc(0.45 + var(--progress) * 0.55);
+}
+.fracture-overlay polyline {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: calc(0.6px + var(--progress) * 1.8px);
+  stroke-linejoin: miter;
+  stroke-linecap: butt;
+  vector-effect: non-scaling-stroke;
+}
+
+/* --- stall cue ------------------------------------------------------------------- */
+
+.stall-cue {
+  position: absolute;
+  width: 4.5rem;
+  height: 4.5rem;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle, rgba(22, 22, 22, 0.16), rgba(22, 22, 22, 0.05) 45%, transparent 70%);
+  filter: blur(4px);
+  opacity: 0;
+  left: calc(50% - 2.25rem);
+  top: calc(50% - 2.25rem);
+}
+.stall-cue[data-cue='tap'] {
+  animation: cue-tap 3.2s ease-in-out infinite;
+}
+.stall-cue[data-cue='drift'] {
+  animation: cue-drift 3.2s ease-in-out infinite;
+}
+.stall-cue[data-cue='fracture'] {
+  animation: cue-fracture 2.6s ease-in-out infinite;
+}
+.stall-cue[data-cue='pull'] {
+  animation: cue-pull 3.4s ease-in-out infinite;
+}
+
+@keyframes cue-tap {
+  0%, 100% { opacity: 0; transform: scale(0.7); }
+  40% { opacity: 1; transform: scale(1); }
+}
+@keyframes cue-drift {
+  0% { opacity: 0; transform: translateX(32vw); }
+  25% { opacity: 1; }
+  75% { opacity: 0.6; }
+  100% { opacity: 0; transform: translateX(-32vw); }
+}
+@keyframes cue-fracture {
+  0% { opacity: 0; transform: translate(-22vw, -10vh) scale(0.8); }
+  30% { opacity: 1; }
+  100% { opacity: 0; transform: translate(22vw, 10vh) scale(0.6); }
+}
+@keyframes cue-pull {
+  0% { opacity: 0; transform: translateY(28vh); }
+  30% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-22vh); }
+}
