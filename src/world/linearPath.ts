@@ -53,6 +53,7 @@ export class LinearPath {
           t.glideTo({ x: p.x, y: p.y }, () => {
             this.pending = null
             t.arriveAt(stop.n)
+            focusPlace(stop.n)
           })
         }
         break
@@ -84,6 +85,16 @@ export class LinearPath {
     this.go(index)
     session.patch({ keyboardUser })
   }
+}
+
+/** Move focus to a place's text once React has mounted it (a place found earlier is focused again). */
+function focusPlace(n: number) {
+  const tryFocus = (attempt: number) => {
+    const el = document.querySelector<HTMLElement>(`.place[data-n="${n}"] [data-canon="fragment"]`)
+    if (el) el.focus({ preventScroll: true })
+    else if (attempt < 10) requestAnimationFrame(() => tryFocus(attempt + 1))
+  }
+  requestAnimationFrame(() => tryFocus(0))
 }
 
 const NEXT_KEYS = new Set(['ArrowRight', 'ArrowDown', ' ', 'Spacebar', 'Enter', 'PageDown'])

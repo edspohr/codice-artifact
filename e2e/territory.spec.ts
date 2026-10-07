@@ -92,7 +92,7 @@ test.describe('territory: entry and the linear path', () => {
       expect(lines).toEqual(canon.fragments[n - 1]!.lines)
       await expect(place.locator('[data-seal]')).toHaveText(canon.fragments[n - 1]!.seal)
       // Focus moved to the text for assistive tech.
-      expect(await page.evaluate(() => document.activeElement?.getAttribute('data-n'))).toBe(String(n))
+      await expect.poll(() => page.evaluate(() => document.activeElement?.getAttribute('data-n'))).toBe(String(n))
       // Whatever is mounted is emerging, present or found: never a hidden place.
       for (const state of await page.locator('.place').evaluateAll((els) => els.map((el) => el.getAttribute('data-state')))) {
         expect(state).not.toBe('hidden')
@@ -225,11 +225,16 @@ test.describe('territory: touch', () => {
   test('a place that emerges and is left disperses; a stamped one stays', async ({ page }) => {
     await page.goto(`${BASE}&cfg.MAR_CURRENT_SPEED=0&cfg.EMERGE_MS=100&cfg.DISPERSE_MS=100`)
     await ready(page)
-    // Glide near place 3 (outside the arrival radius, inside emergence), then away, then onto it.
+    // Jump the viewpoint near place 3 (outside the arrival radius, inside emergence) without
+    // crossing it on the way, then glide away, then onto it.
+    // Approach from the side with room, so the clamped camera cannot land inside the arrival radius.
     await page.evaluate(() => {
       const t = window.__codice!.territory!.territory
       const p = t.world.places.find((x) => x.n === 3)!
-      t.glideTo({ x: p.x + t.world.short * 0.4, y: p.y })
+      const side = p.x > 585 ? -1 : 1
+      t.camera.x = p.x + side * t.world.short * 0.4
+      t.camera.y = p.y
+      t.glideTo({ x: t.camera.x, y: p.y })
     })
     await expect(page.locator('.place[data-n="3"]')).toHaveAttribute('data-state', 'present', { timeout: 5000 })
     const farFrom3 = () => {
@@ -258,6 +263,9 @@ test.describe('territory: touch', () => {
     await page.evaluate(() => {
       const t = window.__codice!.territory!.territory
       const p = t.world.places.find((x) => x.n === 3)!
+      const side = p.x > 585 ? -1 : 1
+      t.camera.x = p.x + side * t.world.short * 0.4
+      t.camera.y = p.y
       t.glideTo({ x: p.x, y: p.y })
     })
     await expect(page.locator('.place[data-n="3"]')).toHaveAttribute('data-state', 'found', { timeout: 5000 })
