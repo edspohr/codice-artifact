@@ -1,0 +1,40 @@
+{
+  "name": "codice-artifact",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "predev": "node scripts/render-placeholder-laminas.mjs",
+    "dev": "vite",
+    "prebuild": "node scripts/render-placeholder-laminas.mjs",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "lint": "oxlint",
+    "typecheck": "tsc -b",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "pretest:e2e": "node scripts/render-placeholder-laminas.mjs",
+    "test:e2e": "playwright test",
+    "laminas:placeholder": "node scripts/render-placeholder-laminas.mjs --force",
+    "canon:seal": "node scripts/seal-canon.mjs"
+  },
+  "dependencies": {
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.0",
+    "@testing-library/dom": "^10.4.0",
+    "@testing-library/react": "^16.3.0",
+    "@types/node": "^24.13.3",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "@vitejs/plugin-react": "^6.1.1",
+    "jsdom": "^27.0.0",
+    "oxlint": "^1.81.0",
+    "sharp": "^0.34.3",
+    "typescript": "~6.0.2",
+    "vite": "^8.3.0",
+    "vitest": "^4.0.0"
+  }
+}
