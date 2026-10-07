@@ -71,15 +71,23 @@ export function createFractureRecognizer(): Recognizer {
     },
     move(ctx, s) {
       if (!last) return
-      const segment = Math.hypot(s.x - last.x, s.y - last.y)
-      last = s
+      const prev = last
+      const segment = Math.hypot(s.x - prev.x, s.y - prev.y)
       if (segment < 1.5) return
+      last = s
       const unit = ctx.width * config.FRACTURE_PATH_PER_UNIT
       if (stroke) {
         stroke.length += segment
-        const i = stroke.points.length
-        const j = jitter(i, seed)
-        stroke.points.push(`${(s.x + j).toFixed(1)},${(s.y - j).toFixed(1)}`)
+        // Subdivide long segments so the crack is jagged even when the
+        // pointer reports few samples (coarse touch, synthetic input).
+        const pieces = Math.max(1, Math.min(12, Math.round(segment / 14)))
+        for (let k = 1; k <= pieces; k++) {
+          const t = k / pieces
+          const px = prev.x + (s.x - prev.x) * t
+          const py = prev.y + (s.y - prev.y) * t
+          const j = jitter(stroke.points.length, seed)
+          stroke.points.push(`${(px + j).toFixed(1)},${(py - j).toFixed(1)}`)
+        }
         stroke.el.setAttribute('points', stroke.points.join(' '))
         strokeAdded = Math.min(config.FRACTURE_STROKE_CAP, stroke.length / unit)
       } else {
