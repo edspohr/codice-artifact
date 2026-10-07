@@ -16,7 +16,9 @@
     "pretest:e2e": "node scripts/render-placeholder-laminas.mjs",
     "test:e2e": "playwright test",
     "laminas:placeholder": "node scripts/render-placeholder-laminas.mjs --force",
-    "canon:seal": "node scripts/seal-canon.mjs"
+    "canon:seal": "node scripts/seal-canon.mjs",
+    "deploy": "pnpm build && firebase deploy --only hosting --project codice-tiempo-roto",
+    "deploy:preview": "pnpm build && firebase hosting:channel:deploy preview --expires 7d --project codice-tiempo-roto"
   },
   "dependencies": {
     "react": "^19.2.8",
