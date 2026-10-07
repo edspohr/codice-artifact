@@ -2,150 +2,172 @@
 
 Project memory for Claude Code. Read this fully before any task. It is the contract for the whole build.
 
+**Version 2 (territory).** This replaces the paged "static journey" concept. After walking Phase 1 on a phone, the author judged it an animated book. The piece is now a territory to wander. Sections 3, 4, 6 and 9 changed completely; read them as new.
+
 ## 1. What this is
 
-An interactive web artwork that contains the 22 micro-stories of *Códice del tiempo roto* by Edmundo Spohr. It is not a reader app, not a landing page and not a product. The app **is** the artwork: a living piece that visitors wear down by passing through it, until it bursts and begins again.
+An interactive web artwork that contains the 22 micro-stories of *Códice del tiempo roto* by Edmundo Spohr. It is not a reader app, not a landing page and not a product. The app **is** the artwork: a territory of ink that visitors wander, handle and wear down, until it bursts and begins again as a different world.
 
 Language rule: code, comments, commits and docs in **English**. Everything a visitor sees is in **Spanish**.
 
 ## 2. Governing principles (non-negotiable)
 
-1. **Every element opens a void; none closes one.** Nothing in the piece explains, interprets or comments on the fragments. No tooltips, no onboarding, no instructions, no captions, no "about this fragment".
-2. **The canon is inviolable.** The 22 fragments live in `src/content/codice.canon.json`. Never edit, reorder, reflow, translate, paraphrase or "fix" a character of it. Render line breaks exactly as given. Only the author changes that file.
-3. **No generated text, ever.** No AI-written verses, concepts, labels or hints anywhere in the journey.
-4. **Do not write literary or visitor-facing copy on your own.** All Spanish copy lives in `src/content/copy.es.ts`. When copy is missing, add a key with the value `"TODO-AUTHOR: <what is needed>"` and list it in your summary. You may draft a suggestion in a code comment next to it.
-5. **Ephemeral by design.** Nothing a single visitor does is stored as theirs. No accounts, no login, no cookies beyond what is technically required, no third-party analytics or trackers.
-6. **AI lives only in the Return.** AI generates the ink plates (láminas) once per cycle, server-side. It never runs during a visitor's journey.
-7. **Restraint over spectacle.** Monochrome, slow, quiet. When in doubt, remove.
-8. **Cultural guardrail.** Generated imagery is abstract ink only: no human figures, no faces, no text, no numerals, no symbols, patterns or iconography of any culture or people.
+1. **Every element opens a void; none closes one.** Nothing explains, interprets or instructs. No tooltips, no onboarding, no captions, no hints in words.
+2. **The canon is inviolable.** The 22 fragments live in `src/content/codice.canon.json`. Never edit, reorder lines, reflow, translate or "fix" a character of it. Only the author changes that file and re-seals it.
+3. **The text may react, but it is always legible.** Its presentation can behave like matter (float, shear, settle, thin). Once a fragment is present it is never obscured, never below WCAG AA contrast (4.5:1) and never rendered as anything but real DOM text.
+4. **Not a book.** No pages, no cards, no framed or boxed images, no page-turn transitions, no template repeated 22 times. If something looks like an illustrated page, it is wrong.
+5. **Never illustrate the text.** Behaviours belong to regions, never to individual fragments. Nothing may respond to what a specific fragment says (no red where a text says blood, no smoke where it says smoke).
+6. **No generated text, ever.** And do not write visitor-facing copy yourself: all Spanish copy lives in `src/content/copy.es.ts`; missing copy is a `"TODO-AUTHOR: <what is needed>"` value listed in your summary.
+7. **Ephemeral by design.** Nothing a single visitor does is stored as theirs. No accounts, no cookies beyond the technically required, no third-party analytics or trackers. **Never import `firebase/analytics`.**
+8. **AI lives only in the Return.** It generates the ink plates once per cycle, server-side. It never runs during a visit.
+9. **Restraint over spectacle.** Ink greys on white, slow, quiet. One accent only (section 4). When in doubt, remove.
+10. **Cultural guardrail.** Generated imagery is abstract ink only: no human figures, faces, text, numerals, or symbols, patterns or iconography of any culture or people.
 
 ## 3. The experience
 
-### 3.1 The journey (one visitor)
+### 3.1 Entry
 
-- Entry: the epigraph, alone. Then the ascent through four movements: **Mar Primigenio (1–4) → Tierra Herida (5–10) → Cordillera Silente (11–16) → Cielo Inconquistable (17–22)**.
-- Each movement opens with a **divider view**: the movement title and its mother lámina at full expression, no seal, no other text.
-- Each fragment is one view: text, one lámina, the seal.
-- After fragment 22: everything the visitor left behind dissolves; the reprise (first lines of fragment 1) appears in italics; then the seal alone on a near-white screen. Touching the seal opens the **Colofón**.
-- The journey has no menu, no progress bar, no index. A visitor who leaves and returns starts again.
+The epigraph alone on white. The first touch is the first mark (and, if sound is on, the first note); the white opens into the territory at the bottom of Mar.
 
-### 3.2 Navigation by discovery
+### 3.2 The territory
 
-Each movement asks for a different gesture. These are **starting hypotheses to be tuned in the browser with the author**, not final:
+- One continuous field of ink, larger than the screen, with **four regions stacked from bottom to top: Mar Primigenio → Tierra Herida → Cordillera Silente → Cielo Inconquistable.** This is the Ascent made into a place: ink is dense and dark low in Mar and rises, lightens and dissolves into smoke toward Cielo.
+- The visitor moves by dragging the world. There are no views, no stations, no menu, no map, no index and no URLs.
+- Size is a tuning value; start with each region a few screens wide and a few screens tall on a phone, and adjust with the author.
+- **Geography belongs to the cycle.** The positions of the 22 places are derived deterministically from the cycle number (seeded), so every Return rearranges the world. Constraints: places stay inside their region, keep a minimum distance from each other and from edges, and fragment 22 always sits at the far top of Cielo.
 
-| Movement | Gesture to advance | Feeling |
+### 3.3 Each region has its own physics
+
+The four gestures of the old concept become four ways of moving. **Starting hypotheses to be tuned in the browser with the author:**
+
+| Region | How you move | Feeling |
 |---|---|---|
-| Mar | lateral drift (horizontal swipe / drag) | fluid, undivided |
-| Tierra | press and drag across the view until it fractures | effort, rupture |
-| Cordillera | upward pull with heavy resistance and inertia | weight, ascent |
-| Cielo | stop touching; stillness advances the view | release |
+| Mar | drag with long inertia; when you let go, slow currents keep carrying you | fluid, undivided |
+| Tierra | the ground is crusted; fracture lines block the way and yield only to insistence (strokes accumulate, one stroke is never enough) | effort, rupture |
+| Cordillera | drag with heavy resistance and no inertia; going up costs more than going sideways | weight, ascent |
+| Cielo | touch gives little traction; a light flick sets a direction and stillness sustains the drift; touching again stops it | release |
 
-Rules:
-- No written instructions. Discovery is helped only by (a) the shared patina, which reveals where others have touched, and (b) after a long stall, a faint non-verbal ink cue. Cielo is exempt from the stall cue (stillness is its gesture).
-- Accessible fallback always works: arrow keys / space / Enter on desktop, and a single focusable "advance" control exposed to screen readers. Respect `prefers-reduced-motion`.
-- Mobile first. Handle `touch-action`, `overscroll-behavior`, pull-to-refresh and iOS edge-swipe so gestures never fight the browser. Keep interactive zones away from screen edges.
+**You can go back, but you cannot undo.** Movement is free in every direction, including down into regions already crossed. What the visitor broke stays broken, what they smeared stays smeared, for the session.
 
-### 3.3 The ink trail (session only)
+### 3.4 Fragments are places
 
-- Pointer, touch and scroll leave a soft ink shadow that "dirties" the view. It dries and lightens slowly during the session.
-- It is procedural (Canvas 2D first; move to WebGL only if the performance budget demands it). It runs outside React's render loop.
-- It never covers the text to the point of illegibility. The canon stays readable at all times, in every state of the piece.
-- On exit, the visitor's trail is gone. Individual strokes are never sent to the server.
+- A fragment is a location in its region, **hidden** until the visitor comes near. On approach the text emerges (its ink gathers); the transition is brief and resolves to fully legible. At rest a fragment is either absent or fully legible, never half-shown.
+- On arrival **the seal is stamped**: it was not there before. One stamp, with weight (visual impact; a short vibration where the device supports it; a note if sound is on). Stamped seals persist for the session.
+- Each place has its own local ink formation (its lámina) blended into the ground, with no edges.
+- **The text reacts as matter, by region and always legible:** in Mar it sways with the current; in Tierra the block shears along the cracks the visitor makes; in Cordillera it settles with weight; in Cielo its ink thins (never below the contrast floor).
+- Order is free inside a region.
 
-### 3.4 The patina (shared, accumulates)
+### 3.5 Regions in order, thresholds and the tally
 
-- What persists for everyone is an aggregated **wear map per fragment**: a low-resolution grid (start with 24×32 cells) of how much each zone has been handled, plus which navigation gestures were used where.
-- The client accumulates a session delta locally and sends it in few batched calls (on movement change and on `visibilitychange`/exit) to a Cloud Function. No direct client writes to Firestore.
-- Rendered as subtle soiling, like the edge of a much-read book. Zones many have touched look more handled. On a fresh cycle the piece is clean and navigation is hardest; late in a cycle the worn paths show the way.
+- Regions are crossed in order. The passage up to the next region is a **threshold** at the top of each region, crossed with that region's own physics at full expression. Entering a region shows its **movement title** over the ground (typography per spec §5.1).
+- A threshold is **always passable**: the journey never requires completeness.
+- **The tally** is the only indication of progress in the whole piece. At each threshold there is one seal impression per fragment of the region being left: **inked with its numeral if the visitor found it, blind (embossed, uninked, no numeral) if not.** No numbers, no words, no bar. A visitor who wants everything sees what is missing and goes back; anyone else walks on.
 
-### 3.5 Wear, the Exodus and the Burst (the cycle)
+### 3.6 The exit and the Return
 
-- Global `wear ∈ [0, 1]` = time erosion + touch erosion, both configurable:
-  - `timeWear = elapsed / CYCLE_MAX_DAYS` (time alone must eventually end a cycle).
-  - `touchWear = weightedJourneys / CYCLE_MAX_JOURNEYS`.
-- Target: a cycle lasts from a few weeks to a few months. Values live in a Firestore config doc so the author can calibrate without a deploy.
-- **Signals of approach** grow continuously with wear: fissures lengthen across the views, lámina ink loses cohesion, the seal stamps more unevenly. Never a counter, never a percentage, never text.
-- **Exodus** (`wear ≥ EXODUS_THRESHOLD`, start at 0.85): (1) the Exodus notice email is sent once to subscribers; (2) the next cycle's láminas are generated and stored in advance.
-- **Burst** (`wear ≥ 1`): every connected client witnesses it in real time (the piece atomizes, goes white, returns to alpha). Server-side: patina docs of the cycle are deleted, the cycle number increments, the pre-generated láminas become current. Only aggregate metrics of the finished cycle survive.
-- The Burst must never wait on AI. If lámina generation failed, fall back to procedural láminas for that cycle.
-- No single visitor can burst the piece: cap each session's contribution and rate-limit per client.
+- **Fragment 22 (seal 0) is the exit.** It sits at the far top of Cielo with Cielo's tally beside it (impressions for 17 to 21). After the reading dwell, sustained stillness begins the dissolution; a touch during it cancels and restores the place.
+- The dissolution is the only point of no return: everything the visitor left dissolves and the territory whitens. Then the reprise in italics, then the seal alone with **no numeral** on near-white. Touching it opens the Colofón.
+- A visitor who leaves and comes back starts again.
 
-### 3.6 The Colofón
+### 3.7 Handling the ink
 
-Outside the journey, reached only through the seal after the dissolution. Contains:
-- how the artifact was made and credits (author copy);
-- the current cycle number;
-- **free contribution**: a link to an external payment page (`VITE_DONATION_URL`), any amount, no suggested tiers, no pressure;
-- **email**: optional, independent of the contribution, to receive the Exodus notice and news of new releases. Explicit consent checkbox, single stated purpose, double opt-in, one-click unsubscribe. Emails go straight to the mailing provider (Brevo) through a Cloud Function and are **not** stored in Firestore.
-- A contribution buys nothing inside the piece. No perks, no special marks, no early access.
+- The visitor's finger does not draw on a layer above the world: it **displaces and smears the ink of the territory itself**. This requires WebGL.
+- **The accent:** a visitor's mark is born grey. Burgundy appears only through insistence (repeated handling of the same area) and as the oxidized edge of a mark as it dries. Very desaturated. It is never tied to a fragment and never appears in text, seals or generated plates.
+- The session trail dries and lightens slowly. On exit it is gone; individual strokes are never sent to the server.
 
-## 4. Visual system (from the R4 design spec)
+### 3.8 The patina is desire paths
 
-`docs/CODICE_R4_SPEC_DISENO.md` is the author's design spec. It was written for the **book** edition (Canva, print), so read it with this filter:
+- What persists for everyone is aggregated wear: a low-resolution grid **per region** of where the world has been handled and where visitors lingered. Rendered as worn trails, it draws paths toward the places people found.
+- This is the piece's main help and it comes from other people. After a Burst the territory is virgin and the first visitors of a cycle are explorers.
+- Sent in few batched deltas through a Cloud Function, never as individual strokes.
 
-- **Authoritative here:** its governing principle (§0), the seal numbering logic (§3.1), the four registers of the Ascent (§4), the type system (§5), the seal (§6), the fragment page layout (§7, excluding §7.1), the lámina derivation method and the Mar micro-arc (§8), and the abstraction level (§10).
-- **Does not apply to the artifact:** product strategy (§1), single-side print rule and imposition (§7.1), the book apparatus (§9: cover, "Sobre este Códice", glossary, author page, legal pages), page counts, spine, trim and anything about Canva.
-- **Never surface the appendices.** Appendix A (arcana names and meanings, Hebrew letters) and B are private reserve. They must never appear in the UI, in metadata, in alt text or in image prompts. The seal shows a Roman numeral and nothing else.
-- **Where this file and the spec conflict, this file wins.** Known deliberate departures: the seal's stamping becomes more uneven as wear approaches the Burst (the spec keeps it identical); the láminas are regenerated every cycle (the spec fixes them once).
+### 3.9 Subtle help
 
-Summary of the system (the spec has the detail):
+Demanding, with subtle help, and never in words. When a visitor has found nothing for a long while (and especially in a virgin cycle, when there are no trails), the ground leans: the grain of the ink drifts faintly toward the nearest unfound place. Tunable and easy to miss on purpose.
 
-- **Concept: the Ascent.** Ink is born low, dense and dark (Mar) and through the book rises, lightens and dissolves into smoke (Cielo). Body text does the opposite: it floats high in Mar and descends movement by movement.
-- **Monochrome.** Greys of ink on white. No colour.
-- **Type.** Movement titles in **Archivo**, uppercase, modulated per movement in weight, tracking, alignment and position: Mar Light 300, Tierra Black 900, Cordillera SemiBold 600, Cielo Thin 100 (see spec §5.1, including the optional per-word mix for Tierra and Cielo and the note that Thin may need to become Light on small screens). Body in **Spectral**, natural tracking, generous line-height, left-aligned. Self-host both fonts.
-- **Page layout (portrait, mobile first):** text in the upper region; lámina in the middle-lower zone, never touching the last line of text; a reserved bottom band that holds only the seal.
-- **The seal (sello-carta):** a brutalist, imperfectly hand-stamped solid rectangle (about 4:5), bottom-centre, fixed position, with the Roman numeral in negative (white) set in Archivo. Fragments 1–21 carry I–XXI; **fragment 22 carries 0**. Same numeral cap-height on all 22. The numeral is real text (HTML/SVG), never part of a generated image.
-- **Broken, not smooth.** Fractures, cut lines and misregistration are native vocabulary. Avoid soft continuous spirals and decorative flourishes.
+### 3.10 Sound (experimental, behind a config flag)
 
-## 5. The láminas (AI, once per cycle)
+Touching is playing a note (the epigraph says so). One sustained note per contact, low in Mar and progressively airier toward Cielo, synthesized with Web Audio, no audio files. Unlocked by the first touch on the epigraph. The piece must be complete with sound off. The author will decide after the prototype whether it stays.
 
-- 26 images per cycle, generated server-side with the current Gemini image-generation model (the "Nano Banana" family): **4 mother láminas** (one per movement, used on the divider views) and **22 fragment láminas**, each a subtle variation of its movement's mother. Generate the mother first, validate it, then pass it as the reference image for that movement's fragments (spec §8). **Check the current model ID in the official docs at build time and keep it in config; do not hard-code from memory.**
-- Prompts are in English, built from: a fixed style lock (abstract, textural, sumi-like ink on pure white, monochrome, vertical 2:3, intentional empty zone where the text falls, no recognizable objects, no literal landscape, no line art, no figures, no text, no symbols) + the movement register + the fragment's `laminaCue` from the canon file + a per-cycle variation seed (ink behaviour: wetter, drier, more granular, more broken), so each cycle is a distinct universe inside the same system.
-- `laminaCue` values marked `PROVISIONAL` (Cielo) are placeholders the author will revise. Never treat a cue as visitor-facing text.
-- Pipeline: generate → automated check with a vision model (rejects text, figures, colour, symbols) → up to N retries → convert to WebP in mobile-appropriate sizes → store under `laminas/{cycle}/{n}.webp` (fragments) and `laminas/{cycle}/mother-{movement}.webp`. On repeated failure, mark that view to use the procedural fallback.
-- Cycle 1 is also AI-generated. Provide a seed script that generates the first set and lets the author regenerate any single lámina before launch. From cycle 2 on, generation is unattended.
+### 3.11 Accessibility: the linear path
+
+Keyboard and screen-reader users get a parallel path: "Avanzar" and "Volver" controls travel to the next and previous place in canonical order (the viewpoint glides there), thresholds included, and the full text of each place is exposed in order. This path never depends on gestures or on stillness. `prefers-reduced-motion` turns glides and physics into short fades. The canon tests run on this path.
+
+### 3.12 Wear, the Exodus and the Burst (the cycle)
+
+- Global `wear ∈ [0, 1]` = time erosion + touch erosion, both configurable in a Firestore config doc. Target cycle length: a few weeks to a few months.
+- **Signals of approach** grow with wear: fissures lengthen across the territory, the ink loses cohesion, seals stamp more unevenly. Never a counter, a percentage or text.
+- **Exodus** (`wear ≥ EXODUS_THRESHOLD`, start at 0.85): the notice email goes out once, and the next cycle's plates and geography are prepared in advance.
+- **Burst** (`wear ≥ 1`): every connected client witnesses it in real time (the territory atomizes, goes white, returns to alpha). Server-side the patina is deleted, the cycle number increments, the new plates and the new geography become current. Only aggregate metrics survive.
+- The Burst never waits on AI (procedural fallback), and no single visitor can cause it (per-session caps, rate limits).
+
+### 3.13 The Colofón
+
+Outside the territory, reached only through the lone seal. Contains: how it was made and credits (author copy); the current cycle number; a **free contribution** link to an external page (`VITE_DONATION_URL`), any amount, no tiers, no pressure; an optional **email** sign-up, independent of the contribution, for the Exodus notice and news of new releases (explicit consent, single purpose, double opt-in, one-click unsubscribe; sent straight to Brevo through a Cloud Function, never stored in Firestore). A contribution buys nothing inside the piece.
+
+## 4. Visual system
+
+`docs/CODICE_R4_SPEC_DISENO.md` is the author's design spec, written for the **book** edition. Read it with this filter:
+
+- **Authoritative here:** its governing principle (§0), the seal numbering logic (§3.1), the four registers of the Ascent (§4), the type system (§5), the seal (§6), the lámina derivation method and the Mar micro-arc (§8), and the abstraction level (§10).
+- **Does not apply:** product strategy (§1), the fragment page layout (§7) and everything about pages, the book apparatus (§9), print, Canva.
+- **Never surface the appendices.** Appendix A and B are private reserve: never in the UI, metadata, alt text, tests or image prompts. A seal shows a Roman numeral and nothing else.
+- **Where this file and the spec conflict, this file wins.**
+
+Summary:
+
+- **Ink greys on white, plus one accent.** The accent is the burgundy of section 3.7 and belongs only to the visitor's trace.
+- **Type.** Movement titles in **Archivo**, uppercase, modulated per movement (Mar Light 300, Tierra Black 900, Cordillera SemiBold 600, Cielo Thin 100; details and the optional per-word mix in spec §5.1). Body in **Spectral**, natural tracking, generous line-height, left-aligned, sized in rem. Self-hosted.
+- **The seal:** a brutalist, imperfectly hand-stamped solid rectangle (about 4:5) with the Roman numeral in negative, set in Archivo as real text. Fragments 1–21 carry I–XXI; fragment 22 carries 0; the final lone seal carries nothing. Blind impressions (the tally) are the same shape without ink or numeral.
+- **Plates are terrain, never pictures.** The mother plate of a movement is the ground of its region; a fragment's plate is the local ink formation at its place. Everything blends with soft masks into one continuous field. No rectangle is ever visible.
+- **Broken, not smooth.** Fractures, cut lines and misregistration are native vocabulary. No decorative flourishes.
+
+## 5. The plates (AI, once per cycle)
+
+- 26 images per cycle: **4 mother plates** (region grounds) and **22 fragment plates** (local formations), each fragment plate a subtle variation of its mother. Generate the mother first, validate it, then use it as the reference image for its fragments (spec §8).
+- Model: the current Gemini image-generation model (the "Nano Banana" family). **Check the current model ID in the official docs at build time and keep it in config.**
+- Prompts in English: a fixed style lock (abstract, textural, sumi-like ink on pure white, monochrome, **ink fading to pure white at every edge so the image can be blended into a larger field**, no recognizable objects, no literal landscape, no line art, no figures, no text, no symbols) + the movement register + the fragment's `laminaCue` + a per-cycle variation seed. Cues marked `PROVISIONAL` are placeholders the author will revise; a cue is never visitor-facing.
+- Pipeline: generate → automated check with a vision model (rejects text, figures, colour, symbols, hard edges) → retries → WebP in mobile sizes → `laminas/{cycle}/…`. On repeated failure, procedural fallback for that plate.
+- Cycle 1 is also AI-generated, through a seed script that lets the author regenerate any single plate before launch.
 
 ## 6. Architecture
 
-- **Frontend:** Vite + React + TypeScript. React handles the shell, routing between views and state; the ink trail, patina and transitions run on canvas modules outside React rendering.
-- **Firebase:** Hosting, Firestore, Cloud Functions (2nd gen, TypeScript), Cloud Storage, App Check, a scheduled function for time erosion. Use the Emulator Suite for all local work.
-- **Data model (starting point):**
-  - `state/current` — `{ cycle, wear, phase: 'living' | 'exodus' | 'bursting', updatedAt }`. Clients hold one realtime listener on this doc.
-  - `config/cycle` — thresholds and calibration values.
-  - `patina/{cycle}_{n}` — the wear grid for fragment `n`.
-  - `metrics/{cycle}` — aggregate counters only: journeys started, journeys completed, furthest movement reached, cycle duration, email sign-ups, contribution-link clicks.
-- **Security:** Firestore rules deny all client writes; reads limited to `state/current`, `patina/*` and public lámina files. All mutations go through callable functions with App Check enforced, strict input validation, per-session caps and rate limits.
-- **Cost guardrails:** at most ~25 document reads and a handful of function calls per journey; image generation only once per cycle; set a budget alert. Flag anything that breaks these numbers.
-- **Performance budget:** smooth interaction on a mid-range Android phone; first view usable quickly on a mobile connection; láminas lazy-loaded one view ahead.
-- **Dev tools:** a debug panel available only on emulators (and behind an admin claim in production) to set wear, fast-forward time, force Exodus, force Burst and seed patina. Without it the cycle cannot be tested.
+- **Frontend:** Vite + React + TypeScript (strict). React holds the shell and the DOM text; **the world is a WebGL renderer outside React** (ink field, smear, patina, physics, camera). Propose the lightest approach that meets the budget and justify any library by its bundle cost; no game engine.
+- **Text is DOM, positioned over the world** and kept in sync with the camera, so it stays selectable by assistive tech, testable character-exact and crisp at any zoom.
+- **Firebase** (project `codice-tiempo-roto`, Blaze plan): Hosting, Firestore, Cloud Functions (2nd gen, TypeScript), Cloud Storage, App Check, a scheduled function. Web config comes from `VITE_FIREBASE_*` env vars. No Analytics. Emulator Suite for all local work.
+- **Data model (starting point):** `state/current` `{ cycle, wear, phase, updatedAt }` (one realtime listener); `config/cycle`; `patina/{cycle}_{region}` (wear grid); `metrics/{cycle}` (aggregate counters only: visits started, exits through 22, furthest region reached, places found as totals, cycle duration, sign-ups, contribution clicks). Geography is computed from the cycle number, not stored.
+- **Security:** rules deny all client writes; reads limited to `state/current`, `patina/*` and public plate files. Mutations only through callable functions with App Check, strict validation, per-session caps and rate limits.
+- **Budgets:** smooth on a mid-range Android phone, degrading gracefully (lower simulation resolution before dropping frames); a handful of document reads and function calls per visit; image generation once per cycle; a billing budget alert. Flag anything that breaks these.
+- **Dev tools** (dev builds only, stripped from production): jump to any place or threshold, live override of every physics and timing value, a toggle to reveal all places, and later a panel to set wear, force Exodus and Burst, and seed patina.
 
 ## 7. Non-goals
 
-No accounts. No social sharing buttons. No comments. No gamification, badges or streaks. No explanatory note, no table of contents. No AI chat, no AI text. No dark mode toggle. No English UI in v1.
+No accounts. No social sharing. No comments. No gamification beyond the tally (no scores, badges, streaks, completion screens). No map. No explanatory note. No AI chat, no AI text. No English UI in v1.
 
 ## 8. Open decisions (ask the author; do not decide)
 
-- Payment provider for the free contribution, and the final domain.
-- All copy for the Colofón, the consent line and the Exodus email.
-- Whether the glossary of the printed book appears in the Colofón or nowhere.
+- Every physics and timing value, the size of the territory and the emergence distance.
+- Whether sound stays, and the exact tone of the accent.
+- Whether a pulled-back overview of the territory exists at all.
+- Payment provider and final domain; all copy for the Colofón, the consent line and the Exodus email; whether the printed glossary appears anywhere.
 - Final `laminaCue` values for Cielo (17–22).
 - Calibration: `CYCLE_MAX_DAYS`, `CYCLE_MAX_JOURNEYS`, `EXODUS_THRESHOLD`, per-session cap.
-- Final gesture per movement and the stall-cue timing.
 
 ## 9. Build phases
 
-Work one phase at a time. Each phase ends with: what was built, how to verify it, open questions, and a commit. Do not start the next phase without the author's go-ahead.
+One phase at a time. Each ends with: what was built, how to verify it, what could not be verified without a real device, open questions, and a commit. Do not start the next without the author's go-ahead.
 
-1. **Static journey.** Scaffold, canon loading, the 22 fragment views and 4 divider views with final typography, layout and seal, placeholder láminas, gesture navigation per movement, keyboard/a11y fallback. *Done when* the whole ascent can be walked on a phone and the canon renders character-exact.
-2. **Ink trail.** Session-only procedural ink from touch, pointer and scroll, drying over time. *Done when* it feels right to the author on mobile and holds the performance budget.
-3. **Patina.** Emulators, data model, rules, App Check, batched delta function, rendering of shared wear. *Done when* two browsers see each other's accumulated wear and rules tests pass.
-4. **The cycle.** Wear function, scheduled time erosion, approach signals, Exodus phase, the Burst in real time, cycle reset, debug panel. *Done when* a full cycle can be forced end to end on emulators.
-5. **Láminas by AI.** Generation pipeline, automated check, retries, fallback, storage, seed script for cycle 1, pre-generation at Exodus. *Done when* a Burst swaps in a new set with no visitor-visible wait.
-6. **Colofón.** Contribution link, email sign-up with consent and double opt-in, Exodus notice, unsubscribe. *Done when* a test subscriber receives the notice when Exodus is forced.
-7. **Measure and harden.** Aggregate metrics, abuse limits, budget alert, accessibility pass, cross-device pass, deploy to Hosting.
+1. **Static journey — done, partly retired.** Kept: canon loader and seal, integrity and appendix tests, fonts and tokens, the seal component, copy file, dev-tooling pattern, whatever of the gesture engine is reusable. Retired once Phase 2 passes its gate: the 31 stations and the paged views.
+2. **Prototype: Mar as territory.** One region only, built to be judged, not to be final: WebGL ink field with placeholder plates blended as terrain, drag with Mar's physics, ink smear with the accent, four hidden places that emerge, seal stamping, text swaying, the threshold with its tally (leading to a stub), the linear accessible path, sound behind its flag. Lives beside the old journey until the gate. **Gate: the author walks it on a phone and decides to continue, adjust or go back.**
+3. **The whole territory.** Tierra, Cordillera and Cielo with their physics and text behaviours, thresholds and titles, the exit at 22, the Return sequence, seeded geography, subtle help, full test suite on the linear path; old paged code removed.
+4. **Patina.** Emulators, rules, App Check, batched deltas, desire-path rendering.
+5. **The cycle.** Wear, time erosion, approach signals, Exodus, the Burst in real time, new geography on Return, debug panel.
+6. **Plates by AI.** Generation pipeline, checks, fallback, seed script, pre-generation at Exodus.
+7. **Colofón.** Contribution link, email with consent and double opt-in, Exodus notice.
+8. **Measure and harden.** Aggregate metrics, abuse limits, budget alert, accessibility and cross-device passes, deploy.
 
 ## 10. Working agreements
 
 - Plan before coding; surface ambiguities as questions instead of guessing, especially anything touching sections 2 and 8.
-- Small commits, conventional messages. TypeScript strict. Tests for the wear function, the delta validation and the security rules.
+- Small commits, conventional messages, TypeScript strict. Tests for the canon, the linear path, geography constraints, the wear function, delta validation and security rules.
 - When a principle in section 2 conflicts with a convenience, the principle wins. Say so and propose an alternative.
