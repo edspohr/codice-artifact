@@ -6,9 +6,14 @@ import { render } from '@testing-library/react'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { canon } from '../src/content/canon'
 import { copy } from '../src/content/copy.es'
 import { journey } from '../src/content/journey'
+import { PlaceText } from '../src/territory/PlaceText'
+import { RegionTitle } from '../src/territory/RegionTitle'
+import { Tally } from '../src/territory/Tally'
 import { StationView } from '../src/views/StationView'
+import { placePlaces } from '../src/world/geography'
 
 const root = resolve(__dirname, '..')
 const spec = readFileSync(resolve(root, 'docs/CODICE_R4_SPEC_DISENO.md'), 'utf8')
@@ -110,6 +115,24 @@ describe('appendix terms never surface', () => {
       surfaces.push(...surfacesOf(container, station.id))
       unmount()
     }
+    // Territory surfaces: every place (stamped), every region title, a tally.
+    const rect = { x: 0, y: 0, w: 1170, h: 2532 }
+    for (const m of canon.movements) {
+      const fragments = m.fragments.map((n) => canon.fragments[n - 1]!)
+      for (const place of placePlaces({ cycle: 1, region: m.id, rect, fragments, short: 390 })) {
+        const { container, unmount } = render(
+          <PlaceText place={place} status={{ n: place.n, state: 'found', reveal: 1, found: true, stampedAt: 0 }} />,
+        )
+        surfaces.push(...surfacesOf(container, `place:${place.n}`))
+        unmount()
+      }
+      const title = render(<RegionTitle region={m.id} x={0} y={0} />)
+      surfaces.push(...surfacesOf(title.container, `title:${m.id}`))
+      title.unmount()
+    }
+    const tally = render(<Tally threshold={{ from: 'mar', band: rect, fragments: [1, 2, 3, 4] }} found={new Set([1, 3])} />)
+    surfaces.push(...surfacesOf(tally.container, 'tally'))
+    tally.unmount()
     const offending: string[] = []
     for (const term of terms) {
       const re = matcher(term)
