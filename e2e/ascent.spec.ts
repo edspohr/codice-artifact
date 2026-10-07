@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { cdp, stroke, swipe, tap } from './touch'
+import { cdp, stroke, swipe, tap } from './touch.ts'
 
 interface Canon {
   title: string
