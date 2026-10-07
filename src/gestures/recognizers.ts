@@ -1,4 +1,4 @@
-import { readingLines, type Station } from '../content/journey'
+import { readingWords, type Station } from '../content/journey'
 import { createAutoRecognizer } from './auto'
 import { createDriftRecognizer } from './drift'
 import { createFractureRecognizer } from './fracture'
@@ -18,7 +18,7 @@ export function createRecognizer(station: Station): Recognizer {
     case 'pull':
       return createPullRecognizer()
     case 'stillness':
-      return createStillnessRecognizer(readingLines(station))
+      return createStillnessRecognizer(readingWords(station))
     case 'auto':
       return createAutoRecognizer()
     case 'seal':

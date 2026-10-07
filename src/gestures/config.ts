@@ -38,8 +38,8 @@ export const defaultConfig = {
   // --- Cielo: stillness ---
   /** Minimum dwell before stillness starts counting: base margin (ms). */
   CIELO_DWELL_BASE_MS: 2500,
-  /** Reading time added per canon line (ms). */
-  CIELO_DWELL_PER_LINE_MS: 2200,
+  /** Reading time added per canon word (ms). */
+  CIELO_DWELL_PER_WORD_MS: 400,
   /** Continuous stillness required after the dwell (ms). */
   CIELO_STILL_MS: 4000,
   /** Duration of the slow fade that advances the view (ms). */
@@ -78,7 +78,7 @@ export function resetConfig() {
   Object.assign(config, defaultConfig)
 }
 
-/** Dwell a visitor gets on a Cielo station before stillness counts, by canon lines. */
-export function cieloDwellMs(lines: number): number {
-  return config.CIELO_DWELL_BASE_MS + config.CIELO_DWELL_PER_LINE_MS * Math.max(0, lines)
+/** Dwell a visitor gets on a Cielo station before stillness counts, by canon words. */
+export function cieloDwellMs(words: number): number {
+  return config.CIELO_DWELL_BASE_MS + config.CIELO_DWELL_PER_WORD_MS * Math.max(0, words)
 }

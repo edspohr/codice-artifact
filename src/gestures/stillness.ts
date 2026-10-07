@@ -1,11 +1,12 @@
 // Cielo Inconquistable: stop touching. Stillness only starts counting after
-// a minimum dwell derived from the station's length. Then a slow fade
-// advances the view; any touch during the fade cancels it and restores the
-// view. Never advances a visitor who navigates with the keyboard.
+// a minimum dwell derived from the station's word count. A touch never
+// restarts the dwell, only the stillness timer. Then a slow fade advances
+// the view; any touch during the fade cancels it and restores the view.
+// Never advances a visitor who navigates with the keyboard.
 import { cieloDwellMs, config } from './config'
 import type { Recognizer } from './types'
 
-export function createStillnessRecognizer(lines: number): Recognizer {
+export function createStillnessRecognizer(words: number): Recognizer {
   let mountedAt = 0
   let lastTouch = 0
   let fading = false
@@ -49,7 +50,7 @@ export function createStillnessRecognizer(lines: number): Recognizer {
         }
         return
       }
-      const dwell = cieloDwellMs(lines)
+      const dwell = cieloDwellMs(words)
       if (now - mountedAt >= dwell && now - lastTouch >= config.CIELO_STILL_MS) {
         fading = true
         fadeStart = now

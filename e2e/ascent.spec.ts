@@ -111,6 +111,7 @@ test.describe('the ascent', () => {
 
       if (id === 'seal') {
         await expect(current.getByRole('button', { name: 'Colofón' })).toBeVisible()
+        await expect(current.locator('[data-seal]')).toHaveCount(0)
       }
 
       await expectNoPageScroll(page)
@@ -200,12 +201,12 @@ test.describe('gestures on touch', () => {
 
   test('Cielo: stillness advances only after the dwell; a touch during the fade restores the view', async ({ page, viewport }) => {
     await page.goto(
-      '/?station=frag:17&cfg.CIELO_DWELL_BASE_MS=600&cfg.CIELO_DWELL_PER_LINE_MS=100&cfg.CIELO_STILL_MS=1500&cfg.CIELO_FADE_MS=2500',
+      '/?station=frag:17&cfg.CIELO_DWELL_BASE_MS=600&cfg.CIELO_DWELL_PER_WORD_MS=20&cfg.CIELO_STILL_MS=1500&cfg.CIELO_FADE_MS=2500',
     )
     const s = await cdp(page)
     const w = viewport!.width
     const h = viewport!.height
-    // dwell = 600 + 4 lines × 100 = 1000 ms, stillness 1500 ms: the fade starts at ~1500 ms and lasts 2500 ms.
+    // dwell = 600 + 19 words × 20 = 980 ms, stillness 1500 ms: the fade starts at ~1500 ms and lasts 2500 ms.
     await page.waitForTimeout(1200)
     expect(await stationOf(page)).toBe('frag:17')
     await page.waitForTimeout(900)
@@ -221,7 +222,7 @@ test.describe('gestures on touch', () => {
   })
 
   test('Cielo: a keyboard user is never auto-advanced', async ({ page }) => {
-    await page.goto('/?station=frag:17&cfg.CIELO_DWELL_BASE_MS=100&cfg.CIELO_DWELL_PER_LINE_MS=0&cfg.CIELO_STILL_MS=100&cfg.CIELO_FADE_MS=200')
+    await page.goto('/?station=frag:17&cfg.CIELO_DWELL_BASE_MS=100&cfg.CIELO_DWELL_PER_WORD_MS=0&cfg.CIELO_STILL_MS=100&cfg.CIELO_FADE_MS=200')
     await page.keyboard.press('ArrowRight')
     await expect(page.locator('.stage')).toHaveAttribute('data-station', 'frag:18')
     await page.waitForTimeout(1500)

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { canon } from '../src/content/canon'
-import { buildJourney, journey, readingLines, stationIndex } from '../src/content/journey'
+import { buildJourney, journey, readingWords, stationIndex } from '../src/content/journey'
 
 describe('journey', () => {
   it('derives 31 stations in canon order', () => {
@@ -33,10 +33,17 @@ describe('journey', () => {
     expect(buildJourney(canon).map((s) => s.id)).toEqual(journey.map((s) => s.id))
   })
 
-  it('counts reading lines for the Cielo dwell', () => {
-    expect(readingLines(journey[stationIndex('frag:22')]!)).toBe(8)
-    expect(readingLines(journey[stationIndex('divider:cielo')]!)).toBe(1)
-    expect(readingLines(journey[stationIndex('reprise')]!)).toBe(2)
-    expect(readingLines(journey[stationIndex('dissolution')]!)).toBe(0)
+  it('counts reading words for the Cielo dwell', () => {
+    const words = (lines: string[]) => lines.join(' ').split(/\s+/).filter(Boolean).length
+    expect(readingWords(journey[stationIndex('frag:22')]!)).toBe(words(canon.fragments[21]!.lines))
+    expect(readingWords(journey[stationIndex('frag:17')]!)).toBe(words(canon.fragments[16]!.lines))
+    expect(readingWords(journey[stationIndex('divider:cielo')]!)).toBe(2)
+    expect(readingWords(journey[stationIndex('reprise')]!)).toBe(words(canon.reprise))
+    expect(readingWords(journey[stationIndex('dissolution')]!)).toBe(0)
+  })
+
+  it('the lone seal carries no numeral', () => {
+    const seal = journey[stationIndex('seal')]!
+    expect('seal' in seal).toBe(false)
   })
 })

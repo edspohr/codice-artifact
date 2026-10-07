@@ -9,10 +9,10 @@ import { fakeContext, s } from './harness'
 beforeEach(() => resetConfig())
 
 describe('config', () => {
-  it('computes the Cielo dwell from base and per-line time', () => {
+  it('computes the Cielo dwell from base and per-word time', () => {
     setConfig('CIELO_DWELL_BASE_MS', 1000)
-    setConfig('CIELO_DWELL_PER_LINE_MS', 500)
-    expect(cieloDwellMs(4)).toBe(3000)
+    setConfig('CIELO_DWELL_PER_WORD_MS', 50)
+    expect(cieloDwellMs(40)).toBe(3000)
     expect(cieloDwellMs(0)).toBe(1000)
   })
   it('rejects unknown keys and non-finite values', () => {
@@ -140,11 +140,11 @@ describe('Cordillera: pull with resistance', () => {
 describe('Cielo: stillness', () => {
   it('never counts stillness before the dwell, then fades and commits', () => {
     setConfig('CIELO_DWELL_BASE_MS', 1000)
-    setConfig('CIELO_DWELL_PER_LINE_MS', 500)
+    setConfig('CIELO_DWELL_PER_WORD_MS', 50)
     setConfig('CIELO_STILL_MS', 1000)
     setConfig('CIELO_FADE_MS', 1000)
     const ctx = fakeContext()
-    const r = createStillnessRecognizer(4) // dwell = 3000
+    const r = createStillnessRecognizer(40) // dwell = 3000
     r.mount!(ctx, 0)
     r.tick!(ctx, 2999, 16)
     expect(ctx.progress).toBe(0)
@@ -154,9 +154,36 @@ describe('Cielo: stillness', () => {
     r.tick!(ctx, 4001, 16)
     expect(ctx.commits).toBe(1)
   })
+  it('a touch during the dwell restarts the stillness timer, never the dwell', () => {
+    setConfig('CIELO_DWELL_BASE_MS', 3000)
+    setConfig('CIELO_DWELL_PER_WORD_MS', 0)
+    setConfig('CIELO_STILL_MS', 500)
+    setConfig('CIELO_FADE_MS', 1000)
+    const ctx = fakeContext()
+    const r = createStillnessRecognizer(10)
+    r.mount!(ctx, 0)
+    // Touches at 1000 and 2800 ms, well inside the dwell.
+    r.start!(ctx, s(50, 50, 1000))
+    r.end!(ctx, s(50, 50, 1050), [], { vx: 0, vy: 0 })
+    r.start!(ctx, s(50, 50, 2800))
+    r.end!(ctx, s(50, 50, 2850), [], { vx: 0, vy: 0 })
+    r.tick!(ctx, 2999, 16)
+    expect(ctx.progress).toBe(0)
+    // Dwell ends at 3000 from mount; stillness since the last touch (2850) reaches 500 at 3350.
+    r.tick!(ctx, 3300, 16)
+    expect(ctx.progress).toBe(0)
+    r.tick!(ctx, 3351, 16)
+    r.tick!(ctx, 3851, 16)
+    expect(ctx.progress).toBeCloseTo(0.5, 1)
+    // Had the touches restarted the dwell, nothing would move before 2850 + 3000.
+    expect(ctx.commits).toBe(0)
+    r.tick!(ctx, 4351, 16)
+    expect(ctx.commits).toBe(1)
+  })
+
   it('restarts stillness after a touch and cancels a fade on touch', () => {
     setConfig('CIELO_DWELL_BASE_MS', 100)
-    setConfig('CIELO_DWELL_PER_LINE_MS', 0)
+    setConfig('CIELO_DWELL_PER_WORD_MS', 0)
     setConfig('CIELO_STILL_MS', 1000)
     setConfig('CIELO_FADE_MS', 2000)
     const ctx = fakeContext()
@@ -181,7 +208,7 @@ describe('Cielo: stillness', () => {
   })
   it('never auto-advances a keyboard user', () => {
     setConfig('CIELO_DWELL_BASE_MS', 10)
-    setConfig('CIELO_DWELL_PER_LINE_MS', 0)
+    setConfig('CIELO_DWELL_PER_WORD_MS', 0)
     setConfig('CIELO_STILL_MS', 10)
     setConfig('CIELO_FADE_MS', 10)
     const ctx = fakeContext()

@@ -26,7 +26,7 @@ export type Station =
   | { id: `frag:${number}`; kind: 'fragment'; gesture: GestureKind; movement: Movement; fragment: Fragment }
   | { id: 'dissolution'; kind: 'dissolution'; gesture: 'auto' }
   | { id: 'reprise'; kind: 'reprise'; gesture: 'stillness'; lines: string[] }
-  | { id: 'seal'; kind: 'seal'; gesture: 'seal'; seal: string }
+  | { id: 'seal'; kind: 'seal'; gesture: 'seal' }
   | { id: 'colofon'; kind: 'colofon'; gesture: 'none' }
 
 export type StationId = Station['id']
@@ -45,22 +45,26 @@ export function buildJourney(c: Canon): Station[] {
   }
   stations.push({ id: 'dissolution', kind: 'dissolution', gesture: 'auto' })
   stations.push({ id: 'reprise', kind: 'reprise', gesture: 'stillness', lines: c.reprise })
-  const last = c.fragments[c.fragments.length - 1]
-  stations.push({ id: 'seal', kind: 'seal', gesture: 'seal', seal: last ? last.seal : '0' })
+  // The lone seal carries no numeral (author decision).
+  stations.push({ id: 'seal', kind: 'seal', gesture: 'seal' })
   stations.push({ id: 'colofon', kind: 'colofon', gesture: 'none' })
   return stations
 }
 
-/** Number of canon lines a visitor reads on a station (drives the Cielo dwell). */
-export function readingLines(station: Station): number {
+function countWords(lines: readonly string[]): number {
+  return lines.reduce((n, line) => n + line.split(/\s+/).filter(Boolean).length, 0)
+}
+
+/** Number of canon words a visitor reads on a station (drives the Cielo dwell). */
+export function readingWords(station: Station): number {
   switch (station.kind) {
     case 'epigraph':
     case 'reprise':
-      return station.lines.length
+      return countWords(station.lines)
     case 'fragment':
-      return station.fragment.lines.length
+      return countWords(station.fragment.lines)
     case 'divider':
-      return 1
+      return countWords([station.movement.title])
     default:
       return 0
   }

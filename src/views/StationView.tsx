@@ -24,7 +24,7 @@ function body(station: Station) {
     case 'reprise':
       return <RepriseView lines={station.lines} />
     case 'seal':
-      return <SealAloneView seal={station.seal} />
+      return <SealAloneView />
     case 'colofon':
       return <ColofonView />
   }
