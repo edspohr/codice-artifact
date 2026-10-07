@@ -7,6 +7,8 @@
   --ink-3: #8c8c8c;
   --paper: #fcfcfc;
   --paper-near: #f4f4f4;
+  /* The one accent: a very desaturated burgundy, only in the visitor's trace. */
+  --accent: #70464e;
 
   --font-body: 'Spectral', Georgia, 'Times New Roman', serif;
   --font-title: 'Archivo', 'Helvetica Neue', Arial, sans-serif;

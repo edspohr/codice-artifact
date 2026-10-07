@@ -60,6 +60,102 @@ export const defaultConfig = {
   KEYBOARD_SETTLE_MS: 260,
   /** Snap-back time when a gesture is released early (ms). */
   SNAPBACK_MS: 360,
+
+  // =====================================================================
+  // Territory (Phase 2 prototype: Mar). Every value is a live override.
+  // Distances marked "× short" are fractions of the viewport's short side.
+  // =====================================================================
+
+  // --- world ---
+  /** Mar region size in screens. */
+  MAR_SCREENS_W: 3,
+  MAR_SCREENS_H: 3,
+  /** White stub above Mar's threshold (the next region's stand-in), in screens. */
+  STUB_SCREENS_H: 1.5,
+  /** Places keep this distance from the region edges (× short). */
+  PLACE_EDGE_MARGIN: 0.45,
+  /** Minimum distance between places (× short). */
+  PLACE_MIN_DIST: 1.1,
+  /** A place emerges when the screen centre comes this close (× short). */
+  EMERGE_DISTANCE: 0.6,
+  /** Arrival (the stamp) at this distance (× short). */
+  ARRIVE_DISTANCE: 0.2,
+  /** Emergence and dispersion times (ms). */
+  EMERGE_MS: 700,
+  DISPERSE_MS: 900,
+  /** Local formation radius of a place (× short). */
+  FORMATION_RADIUS: 0.55,
+
+  // --- Mar physics: traction ---
+  /** Fraction of the finger's motion the world follows. The rest is slip, and slip smears. */
+  MAR_TRACTION: 0.7,
+  /** The world's velocity lags the finger with this time constant (ms). Scrubbing slips; steady drags carry. */
+  MAR_LAG_MS: 120,
+  /** Inertia: velocity decays as exp(-k·dt) with k per ms. */
+  MAR_FRICTION: 0.0012,
+  /** Currents after release: speed (px/s), wavelength (px) and how fast the camera adopts them (per s). */
+  MAR_CURRENT_SPEED: 14,
+  MAR_CURRENT_SCALE: 900,
+  MAR_CURRENT_ADOPT: 0.6,
+  /** Currents fade this many seconds after the last touch. 0 = never fade. */
+  MAR_CURRENT_FADE_S: 25,
+  /** Subtle help: bias of the current toward the nearest unfound place. 0 disables. */
+  MAR_HELP_BIAS: 0.15,
+  /** Current multiplier inside the threshold band. */
+  THRESHOLD_CURRENT_MULT: 2,
+  /** The camera may overshoot the world edge by this many px (0 = hard edge). */
+  CAMERA_EDGE_SOFT: 0,
+  /** Threshold band height (screens). */
+  THRESHOLD_BAND_SCREENS: 0.6,
+
+  // --- ink simulation ---
+  /** Simulation resolution as a fraction of world px. */
+  SIM_SCALE: 0.25,
+  /** Brush radius (× short). */
+  BRUSH_RADIUS: 0.07,
+  /** How much slip becomes ink velocity. */
+  BRUSH_STRENGTH: 1.0,
+  /** Ink velocity decay per second. */
+  VEL_DECAY: 7,
+  /** Seconds for a smear to dry back toward the ground. */
+  INK_DRY_S: 120,
+  /** Insistence: how fast repeated handling accumulates, and decays per second. */
+  INSISTENCE_RATE: 0.35,
+  INSISTENCE_DECAY: 0.03,
+  /** Accent strength (burgundy through insistence and drying). 0 disables. */
+  ACCENT_STRENGTH: 0.7,
+
+  // --- clearing under text (the ink parts around it) ---
+  /** Margin around a text block (× short), softness (× short) and edge irregularity (0..1). */
+  CLEAR_MARGIN: 0.12,
+  CLEAR_SOFT: 0.24,
+  CLEAR_IRREGULARITY: 0.9,
+  /** Residual ink allowed under text (0 = pure paper). Keep low for the contrast floor. */
+  CLEAR_RESIDUAL: 0.08,
+
+  // --- text as matter ---
+  /** Sway in px per 1000 px/s of camera velocity, and max rotation (deg). */
+  SWAY_AMPLITUDE: 8,
+  SWAY_ROTATION: 0.6,
+  /** Sway smoothing (per s). */
+  SWAY_SMOOTH: 4,
+
+  // --- seal ---
+  STAMP_MS: 480,
+  STAMP_VIBRATE_MS: 18,
+
+  // --- entry and titles ---
+  /** The white opens into the territory over this time (ms). */
+  OPEN_MS: 1600,
+  TITLE_FADE_MS: 1400,
+
+  // --- linear accessible path ---
+  GLIDE_MS: 900,
+
+  // --- sound (experimental) ---
+  SOUND_ENABLED: 0,
+  SOUND_BASE_HZ: 110,
+  SOUND_GAIN: 0.1,
 }
 
 export type GestureConfig = typeof defaultConfig

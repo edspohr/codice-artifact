@@ -11,6 +11,8 @@ export const copy = {
   a11y: {
     /** Label of the single focusable control that advances the journey. */
     advance: 'Avanzar',
+    /** Label of the control that travels back to the previous place (territory). */
+    back: 'Volver',
     /** Label of the seal when it becomes the button that opens the Colofón. */
     sealToColofon: 'Colofón',
   },
