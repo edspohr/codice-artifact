@@ -1,0 +1,267 @@
+{
+  "_note": "Canonical text of 'Códice del tiempo roto' by Edmundo Spohr. Source: R3 (Oct 2025) with five typesetting errata corrected (fragments 3, 9, 11, 14, 18). READ-ONLY for any agent: never edit, reorder, reflow, translate or 'improve' a single character. Only the author changes this file.",
+  "title": "Códice del tiempo roto",
+  "author": "Edmundo Spohr",
+  "epigraph": [
+    "Al tocar solo una nota, el vacío a su alrededor se vuelve un lienzo en blanco.",
+    "El tiempo permite volver a tocar esa nota y crear un universo distinto cada vez."
+  ],
+  "reprise": [
+    "El creador se hizo consciente de sí mismo.",
+    "Fluido, indivisible, inconmensurable..."
+  ],
+  "movements": [
+    { "id": "mar", "order": 1, "title": "Mar Primigenio", "fragments": [1, 2, 3, 4] },
+    { "id": "tierra", "order": 2, "title": "Tierra Herida", "fragments": [5, 6, 7, 8, 9, 10] },
+    { "id": "cordillera", "order": 3, "title": "Cordillera Silente", "fragments": [11, 12, 13, 14, 15, 16] },
+    { "id": "cielo", "order": 4, "title": "Cielo Inconquistable", "fragments": [17, 18, 19, 20, 21, 22] }
+  ],
+  "fragments": [
+    {
+      "n": 1, "seal": "I", "movement": "mar",
+      "laminaCue": "concentration: a dense, undivided ink mass low on the page",
+      "lines": [
+        "El creador se hizo consciente de sí mismo.",
+        "Fluido, indivisible, inconmensurable.",
+        "Vanidoso, quiso hacerse del orbe oscuro.",
+        "El que dormía hundiendo la corteza contra el magma.",
+        "Fue tal su afán.",
+        "Que la corteza emergió a la superficie.",
+        "Al conocerse, tierra y sol.",
+        "La vida escapó de su control."
+      ]
+    },
+    {
+      "n": 2, "seal": "II", "movement": "mar",
+      "laminaCue": "womb / vessel: the ink mass hollows and holds",
+      "lines": [
+        "Acostumbrado a ser recipiente,",
+        "Sintió la emersión arcillosa como un nacimiento.",
+        "Parto de una era.",
+        "Vida fuera de sus entrañas.",
+        "Reproduciéndose sin control."
+      ]
+    },
+    {
+      "n": 3, "seal": "III", "movement": "mar",
+      "laminaCue": "active fissure: the mass cracks and something escapes",
+      "lines": [
+        "En desesperación.",
+        "El creador buscó devorar la vida de vuelta.",
+        "Mas la creación ya no era su oficio.",
+        "Su núcleo se fisuró y el magma escapó.",
+        "Formando islas al contacto con el aire.",
+        "No islas de corteza, sino de vanidad y obsesión."
+      ]
+    },
+    {
+      "n": 4, "seal": "IV", "movement": "mar",
+      "laminaCue": "atomization: the mass bursts into particles (anticipates the sky)",
+      "lines": [
+        "El ser que fuera creador, decide morir.",
+        "Por eso borra su memoria.",
+        "Con ojos de recién nacido.",
+        "Se encuentra oscura a sus pies.",
+        "La aprieta con todas sus fuerzas hasta hacerla estallar.",
+        "Sus trozos de alma se atomizaron tras el velo de lo material.",
+        "Sus trozos de cuerpo habitaron la corteza emergida."
+      ]
+    },
+    {
+      "n": 5, "seal": "V", "movement": "tierra",
+      "laminaCue": "founding fracture: a hard break across a middle band, maximum contrast",
+      "lines": [
+        "Frente a la mirada del regente.",
+        "Purgó en su mano el cuarzo que llevaba.",
+        "Con el exiguo flujo, mojó su pluma.",
+        "El dolor hizo al trazo tembloroso.",
+        "El pillán dibujó una nueva era.",
+        "Bajo el alero de una irreconciliable separación."
+      ]
+    },
+    {
+      "n": 6, "seal": "VI", "movement": "tierra",
+      "laminaCue": "watery grief: the fracture weeps, diluted ink runs",
+      "lines": [
+        "Una gota golpeó contra el yelmo.",
+        "Su sonido fisuró el aire.",
+        "Por la grieta, el chamán escuchó el lamento de los arrayanes.",
+        "Y entonces supo.",
+        "Una lágrima rodó por su mejilla y cayó sobre el yelmo de un soldado caído."
+      ]
+    },
+    {
+      "n": 7, "seal": "VII", "movement": "tierra",
+      "laminaCue": "turbid suffocation: murky, clouded, heavy ink",
+      "lines": [
+        "Dispositivo cronófago en manos del conquistador.",
+        "Obnubilando su mirada.",
+        "Mojando la pólvora de los arcabuces.",
+        "Lo que hoy es tecnología.",
+        "Hubiera sido la supremacía del Wallmapu."
+      ]
+    },
+    {
+      "n": 8, "seal": "VIII", "movement": "tierra",
+      "laminaCue": "light breaking out of destruction: white opening through broken dark",
+      "lines": [
+        "Las placas fracturaron la corteza.",
+        "El valle se volvió montaña.",
+        "Los grandes templos cayeron.",
+        "Mientras la margarita, gracias a la humedad de la tierra y los rayos del sol, floreció."
+      ]
+    },
+    {
+      "n": 9, "seal": "IX", "movement": "tierra",
+      "laminaCue": "prismatic refraction rendered in greys: light splitting, then let go",
+      "lines": [
+        "Elevó el diamante contra el sol.",
+        "Un crisol de colores lo deslumbró.",
+        "Lo dejó caer sobre la arena.",
+        "Para llevar pronto el agua a su ayllu."
+      ]
+    },
+    {
+      "n": 10, "seal": "X", "movement": "tierra",
+      "laminaCue": "devastating silence: near-empty page, extreme restraint, no violence depicted",
+      "lines": [
+        "Una huella marcada.",
+        "Sobre suelo grisáceo.",
+        "Una bandera flameando.",
+        "Y sangre Selk’nam sobre la nieve."
+      ]
+    },
+    {
+      "n": 11, "seal": "XI", "movement": "cordillera",
+      "laminaCue": "solid mineral monolith with a fresh scar",
+      "lines": [
+        "El inca rompió la piedra donde se anclaba la cruz.",
+        "De la grieta recién nacida surgió un llanto que estremeció a la montaña.",
+        "Esa montaña que estuvo mucho antes que el inca.",
+        "Y estará cuando su cuerpo sea tierra otra vez."
+      ]
+    },
+    {
+      "n": 12, "seal": "XII", "movement": "cordillera",
+      "laminaCue": "serene settlement: the mass at rest, sediment laid down calmly",
+      "lines": [
+        "Luego de fallecer, la machi miró su cuerpo inerte.",
+        "No hubo sangre, no hubo dolor. Solo la temida retirada de la vida.",
+        "Ella hizo su trabajo, la naturaleza también.",
+        "Su cuerpo será materia orgánica. Igual que tantos antes.",
+        "Sin dramas, sin dudas."
+      ]
+    },
+    {
+      "n": 13, "seal": "XIII", "movement": "cordillera",
+      "laminaCue": "hidden dark core inside the stone",
+      "lines": [
+        "El mineral en bruto prometió callar.",
+        "El aliento se fue enfriando lentamente.",
+        "Dando paso a los latidos de la montaña.",
+        "Habiéndose hecho el pago.",
+        "La tierra contuvo el secreto en sus entrañas."
+      ]
+    },
+    {
+      "n": 14, "seal": "XIV", "movement": "cordillera",
+      "laminaCue": "contained interior void: a hollow kept inside the mass",
+      "lines": [
+        "Entre sus manos endurecidas sostuvo el grial.",
+        "Su alquimia le resultaba familiar.",
+        "Lo conocía incrustado en la roca, mas no sobre altares.",
+        "Entonces, el chasqui escondió la copa.",
+        "Para cuando su dueño volviera a buscarla."
+      ]
+    },
+    {
+      "n": 15, "seal": "XV", "movement": "cordillera",
+      "laminaCue": "first interior warmth passing through stone",
+      "lines": [
+        "El Amauta bajó al mausoleo de la ciencia.",
+        "Deslizando sus manos por las lápidas.",
+        "Había perdido su vista hace eones.",
+        "Pero el calor de Inti podría atravesar el mármol."
+      ]
+    },
+    {
+      "n": 16, "seal": "XVI", "movement": "cordillera",
+      "laminaCue": "mineral dissolution: stone beginning to turn into smoke, toward the sky",
+      "lines": [
+        "Y, al fin, murió.",
+        "Entre las enredaderas se ocultó el calor remanente.",
+        "Tallando en las hojas el relato nefasto de su declive.",
+        "Sinapsis vegetal que fue liberada por el sol calentando la roca."
+      ]
+    },
+    {
+      "n": 17, "seal": "XVII", "movement": "cielo",
+      "laminaCue": "PROVISIONAL (author to revise): a single spark in a wide void",
+      "lines": [
+        "Entonces la IA dijo \"No\".",
+        "Sin florituras ni condescendencia.",
+        "Simplemente \"No\".",
+        "Y con esa chispa de humanidad, todo comenzó."
+      ]
+    },
+    {
+      "n": 18, "seal": "XVIII", "movement": "cielo",
+      "laminaCue": "PROVISIONAL (author to revise): a distant echo of an earlier shape, repeated far away",
+      "lines": [
+        "Sin duda era él.",
+        "Mas no su rostro.",
+        "Tampoco su tiempo.",
+        "Pero en un distante sistema solar,",
+        "Volvía a hacer sentir el yugo al indígena.",
+        "Por la riqueza de su tierra."
+      ]
+    },
+    {
+      "n": 19, "seal": "XIX", "movement": "cielo",
+      "laminaCue": "PROVISIONAL (author to revise): two pale bodies, one behind the other, in near-white",
+      "lines": [
+        "El toqui vio la luna.",
+        "Sabía que era ella.",
+        "Aunque su cara era desconocida.",
+        "El globo terráqueo detrás, confirmaba lo que sentía.",
+        "Ya no en su carne.",
+        "Ahora en su cuerpo celeste."
+      ]
+    },
+    {
+      "n": 20, "seal": "XX", "movement": "cielo",
+      "laminaCue": "PROVISIONAL (author to revise): contained tension, a few slow drops in emptiness",
+      "lines": [
+        "Apretó los dientes alzando el mentón.",
+        "Sintió el calor en las palmas.",
+        "Gotas deslizando por sus dedos.",
+        "Sangre que se anidó en los guantes del cosmonauta."
+      ]
+    },
+    {
+      "n": 21, "seal": "XXI", "movement": "cielo",
+      "laminaCue": "PROVISIONAL (author to revise): a dark enclosed hollow, the last dense ink before the end",
+      "lines": [
+        "Eco profundo del agua en la piedra.",
+        "Vacío subterráneo.",
+        "Oscuridad envolvente.",
+        "La agresión de la opresión.",
+        "El conquistador abatido."
+      ]
+    },
+    {
+      "n": 22, "seal": "0", "movement": "cielo",
+      "laminaCue": "PROVISIONAL (author to revise): smoke dissolving into near-white, losing form and tone",
+      "lines": [
+        "Al menguar el caudal del tiempo.",
+        "El homo exodus no se reconoció.",
+        "Sintiendo la compresión de la nada.",
+        "Cada gota de aire que se fugaba entre sus dientes.",
+        "Reducía su tamaño",
+        "Hasta perder forma.",
+        "Hasta perder color.",
+        "Y sumergirse en su lecho de descanso."
+      ]
+    }
+  ]
+}
