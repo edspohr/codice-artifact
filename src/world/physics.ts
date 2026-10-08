@@ -41,7 +41,9 @@ export class MarPhysics {
     const from = this.camera.toWorld(fingerX - fdx, fingerY - fdy)
     // Target world velocity: the world moves opposite to the finger, scaled by traction.
     const safeDt = Math.max(1, dt)
-    const targetVx = (-fdx * config.MAR_TRACTION) / safeDt
+    // Banks: lateral traction fades toward the edges of the channel.
+    const lateralTraction = config.MAR_TRACTION * (1 - config.BANK_RESISTANCE * this.bankFactor(this.camera.x))
+    const targetVx = (-fdx * lateralTraction) / safeDt
     const targetVy = (-fdy * config.MAR_TRACTION) / safeDt
     const lag = Math.max(0, config.MAR_LAG_MS)
     const k = lag > 0 ? 1 - Math.exp(-safeDt / lag) : 1
@@ -73,7 +75,9 @@ export class MarPhysics {
     this.camera.vy += (current.y - this.camera.vy) * adopt
 
     const speed = Math.hypot(this.camera.vx, this.camera.vy)
-    if (speed < 0.0005 && Math.hypot(current.x, current.y) < 0.0005) {
+    // At rest: nothing left to carry (the bank's return current alone, once slow, does not keep the loop alive).
+    const carried = this.currentSpeed(now)
+    if ((speed < 0.0005 && Math.hypot(current.x, current.y) < 0.0005) || (carried <= 0 && speed < 0.01)) {
       this.camera.vx = 0
       this.camera.vy = 0
       return false
@@ -82,40 +86,71 @@ export class MarPhysics {
     return true
   }
 
-  /** Current velocity (px/ms) at a world position. */
-  currentAt(x: number, y: number, now: number, nearestUnfound: Vec2 | null): Vec2 {
+  /**
+   * 0 on the centre line, 1 when the viewport touches the edge of the channel.
+   * Measured over the camera's reachable lateral play, so a narrow channel
+   * still has banks.
+   */
+  bankFactor(x: number): number {
+    const region = this.world.regions[0]?.rect
+    if (!region) return 0
+    const halfRange = Math.max(1, region.w / 2 - this.camera.viewW / 2)
+    const u = Math.abs(x - (region.x + region.w / 2)) / halfRange
+    const start = Math.min(0.99, Math.max(0, config.BANK_START))
+    return Math.max(0, Math.min(1, (u - start) / (1 - start)))
+  }
+
+  /** Direction of the current (unit vector): up the channel, wiggling, bent toward the nearest unfound place. */
+  currentDirection(x: number, y: number, nearestUnfound: Vec2 | null): Vec2 {
+    const scale = Math.max(50, config.MAR_CURRENT_SCALE)
+    const wiggle = config.MAR_CURRENT_WIGGLE * Math.sin((y / scale) * 2.1 + 0.7 + Math.cos((x / scale) * 1.3))
+    let cx = wiggle
+    let cy = -1
+    const bias = config.MAR_HELP_BIAS
+    if (bias > 0 && nearestUnfound) {
+      const dx = nearestUnfound.x - x
+      const dy = nearestUnfound.y - y
+      const d = Math.hypot(dx, dy) || 1
+      cx = cx * (1 - bias) + (dx / d) * bias
+      cy = cy * (1 - bias) + (dy / d) * bias
+    }
+    const m = Math.hypot(cx, cy) || 1
+    return { x: cx / m, y: cy / m }
+  }
+
+  /** Speed of the carrying current (px/ms), after its fade since the last touch. */
+  currentSpeed(now: number): number {
     let speed = config.MAR_CURRENT_SPEED / 1000
     const fade = config.MAR_CURRENT_FADE_S
     if (fade > 0) {
       const t = (now - this.lastTouchAt) / 1000
       speed *= Math.max(0, 1 - t / fade)
     }
-    if (speed <= 0) return { x: 0, y: 0 }
-    const scale = Math.max(50, config.MAR_CURRENT_SCALE)
-    // A smooth, divergence-free-ish field from two sine terms.
-    const a = Math.sin((y / scale) * 2.1 + 0.7) + 0.5 * Math.cos((x / scale) * 1.3 - 0.4)
-    const b = Math.cos((x / scale) * 1.7 - 1.1) - 0.5 * Math.sin((y / scale) * 0.9 + 0.2)
-    let cx = a
-    let cy = b
+    return speed
+  }
+
+  /** Current velocity (px/ms) at a world position. Mar's current exists only inside Mar. */
+  currentAt(x: number, y: number, now: number, nearestUnfound: Vec2 | null): Vec2 {
+    const mar = this.world.regions[0]?.rect
+    if (mar && y < mar.y) return { x: 0, y: 0 }
+    const speed = this.currentSpeed(now)
+    const dir = this.currentDirection(x, y, nearestUnfound)
+    let vx = dir.x * speed
+    let vy = dir.y * speed
     // Threshold band: Mar at full expression.
     for (const th of this.world.thresholds) {
       if (y >= th.band.y && y <= th.band.y + th.band.h) {
-        cx *= config.THRESHOLD_CURRENT_MULT
-        cy *= config.THRESHOLD_CURRENT_MULT
+        vx *= config.THRESHOLD_CURRENT_MULT
+        vy *= config.THRESHOLD_CURRENT_MULT
       }
     }
-    // Subtle help: lean toward the nearest unfound place.
-    const bias = config.MAR_HELP_BIAS
-    if (bias > 0 && nearestUnfound) {
-      const dx = nearestUnfound.x - x
-      const dy = nearestUnfound.y - y
-      const d = Math.hypot(dx, dy) || 1
-      // The camera moves opposite to the world, so to bring the place toward the
-      // centre the viewpoint must move toward it.
-      cx = cx * (1 - bias) + (dx / d) * bias * 1.5
-      cy = cy * (1 - bias) + (dy / d) * bias * 1.5
+    // Banks: a return current toward the centre line, so nobody drifts into nothing.
+    const region = this.world.regions[0]?.rect
+    const bank = this.bankFactor(x)
+    if (region && bank > 0) {
+      const toCentre = Math.sign(region.x + region.w / 2 - x)
+      vx += (toCentre * config.BANK_RETURN * bank) / 1000
     }
-    const m = Math.hypot(cx, cy) || 1
-    return { x: (cx / m) * speed, y: (cy / m) * speed }
+    return { x: vx, y: vy }
   }
 }

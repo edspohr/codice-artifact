@@ -21,6 +21,7 @@ export function buildWorld(viewportW: number, viewportH: number, cycle: number):
     rect: marRect,
     fragments: mar.fragments.map((n) => canon.fragments[n - 1]!),
     short,
+    viewH: viewportH,
   })
 
   const bandH = Math.round(viewportH * config.THRESHOLD_BAND_SCREENS)

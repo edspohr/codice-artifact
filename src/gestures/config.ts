@@ -67,15 +67,22 @@ export const defaultConfig = {
   // =====================================================================
 
   // --- world ---
-  /** Mar region size in screens. */
-  MAR_SCREENS_W: 3,
-  MAR_SCREENS_H: 3,
+  /** Mar is a channel: lateral play, but the way is up (screens). */
+  MAR_SCREENS_W: 1.4,
+  MAR_SCREENS_H: 4,
   /** White stub above Mar's threshold (the next region's stand-in), in screens. */
   STUB_SCREENS_H: 1.5,
   /** Places keep this distance from the region edges (× short). */
-  PLACE_EDGE_MARGIN: 0.45,
+  PLACE_EDGE_MARGIN: 0.35,
   /** Minimum distance between places (× short). */
-  PLACE_MIN_DIST: 1.1,
+  PLACE_MIN_DIST: 0.9,
+  /** Channel ordering: lateral offset of places from the centre line (× half width), its jitter (× half width). */
+  PLACE_LATERAL: 0.3,
+  PLACE_LATERAL_JITTER: 0.2,
+  /** Vertical jitter of a place around its slot along the ascent (× screen height). */
+  PLACE_JITTER: 0.1,
+  /** The first place lies this many screens above the start (centre to centre). */
+  FIRST_PLACE_SCREENS: 0.85,
   /** A place emerges when the screen centre comes this close (× short). */
   EMERGE_DISTANCE: 0.6,
   /** Arrival (the stamp) at this distance (× short). */
@@ -91,16 +98,23 @@ export const defaultConfig = {
   MAR_TRACTION: 0.7,
   /** The world's velocity lags the finger with this time constant (ms). Scrubbing slips; steady drags carry. */
   MAR_LAG_MS: 120,
+  /** Banks: beyond this fraction of the half width the ink thins and resistance grows (0..1). */
+  BANK_START: 0.5,
+  /** How much lateral traction is lost at the very edge (0..1). */
+  BANK_RESISTANCE: 0.85,
+  /** Return current from the banks toward the centre line (px/s at the edge). */
+  BANK_RETURN: 40,
   /** Inertia: velocity decays as exp(-k·dt) with k per ms. */
   MAR_FRICTION: 0.0012,
-  /** Currents after release: speed (px/s), wavelength (px) and how fast the camera adopts them (per s). */
-  MAR_CURRENT_SPEED: 14,
-  MAR_CURRENT_SCALE: 900,
+  /** The current runs up the channel: speed (px/s), lateral wiggle (0..1), wavelength (px), adoption (per s). */
+  MAR_CURRENT_SPEED: 18,
+  MAR_CURRENT_WIGGLE: 0.35,
+  MAR_CURRENT_SCALE: 700,
   MAR_CURRENT_ADOPT: 0.6,
   /** Currents fade this many seconds after the last touch. 0 = never fade. */
-  MAR_CURRENT_FADE_S: 25,
-  /** Subtle help: bias of the current toward the nearest unfound place. 0 disables. */
-  MAR_HELP_BIAS: 0.15,
+  MAR_CURRENT_FADE_S: 0,
+  /** Subtle help: bias of the current (and of the ink's grain) toward the nearest unfound place. 0 disables. */
+  MAR_HELP_BIAS: 0.45,
   /** Current multiplier inside the threshold band. */
   THRESHOLD_CURRENT_MULT: 2,
   /** The camera may overshoot the world edge by this many px (0 = hard edge). */
@@ -110,7 +124,7 @@ export const defaultConfig = {
 
   // --- ink simulation ---
   /** Simulation resolution as a fraction of world px. */
-  SIM_SCALE: 0.25,
+  SIM_SCALE: 0.4,
   /** Brush radius (× short). */
   BRUSH_RADIUS: 0.07,
   /** How much slip becomes ink velocity. */
@@ -124,6 +138,10 @@ export const defaultConfig = {
   INSISTENCE_DECAY: 0.03,
   /** Accent strength (burgundy through insistence and drying). 0 disables. */
   ACCENT_STRENGTH: 0.7,
+  /** Displaced ink: paler furrow under the finger, darker ridges beside it. 0 disables. */
+  FURROW_STRENGTH: 0.5,
+  /** Grain of the ink running up the channel, bent by the help bias. 0 disables. */
+  GRAIN_STRENGTH: 0.16,
 
   // --- clearing under text (the ink parts around it) ---
   /** Margin around a text block (× short), softness (× short) and edge irregularity (0..1). */
@@ -134,11 +152,22 @@ export const defaultConfig = {
   CLEAR_RESIDUAL: 0.08,
 
   // --- text as matter ---
-  /** Sway in px per 1000 px/s of camera velocity, and max rotation (deg). */
-  SWAY_AMPLITUDE: 8,
-  SWAY_ROTATION: 0.6,
+  /** Sway in px per 1000 px/s of camera velocity, and max rotation (deg). Off by default (motion budget). */
+  SWAY_AMPLITUDE: 0,
+  SWAY_ROTATION: 0,
   /** Sway smoothing (per s). */
   SWAY_SMOOTH: 4,
+
+  // --- arrival: the current deposits the visitor ---
+  /** Settle glide that frames the text block and its seal (ms), and the safe margin (px). */
+  SETTLE_MS: 700,
+  SAFE_MARGIN_PX: 28,
+  /** Leaving a place takes a deliberate drag of at least this many px. */
+  DEPART_PX: 36,
+  /** The arrival sequence: the clearing opens, the text settles, the stamp lands (ms). */
+  CLEAR_OPEN_MS: 600,
+  TEXT_SETTLE_MS: 500,
+  STAMP_DELAY_MS: 250,
 
   // --- seal ---
   STAMP_MS: 480,
@@ -147,7 +176,10 @@ export const defaultConfig = {
   // --- entry and titles ---
   /** The white opens into the territory over this time (ms). */
   OPEN_MS: 1600,
-  TITLE_FADE_MS: 1400,
+  /** The title is an event: in, hold, out (ms). No place can emerge until it is gone. */
+  TITLE_IN_MS: 700,
+  TITLE_HOLD_MS: 1800,
+  TITLE_OUT_MS: 900,
 
   // --- linear accessible path ---
   GLIDE_MS: 900,
