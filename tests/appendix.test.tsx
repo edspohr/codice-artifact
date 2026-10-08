@@ -116,17 +116,17 @@ describe('appendix terms never surface', () => {
       unmount()
     }
     // Territory surfaces: every place (stamped), every region title, a tally.
-    const rect = { x: 0, y: 0, w: 1170, h: 2532 }
+    const rect = { x: 0, y: 0, w: 546, h: 3376 }
     for (const m of canon.movements) {
       const fragments = m.fragments.map((n) => canon.fragments[n - 1]!)
-      for (const place of placePlaces({ cycle: 1, region: m.id, rect, fragments, short: 390 })) {
+      for (const place of placePlaces({ cycle: 1, region: m.id, rect, fragments, short: 390, viewH: 844 })) {
         const { container, unmount } = render(
           <PlaceText place={place} status={{ n: place.n, state: 'found', reveal: 1, found: true, stampedAt: 0 }} />,
         )
         surfaces.push(...surfacesOf(container, `place:${place.n}`))
         unmount()
       }
-      const title = render(<RegionTitle region={m.id} x={0} y={0} />)
+      const title = render(<RegionTitle region={m.id} />)
       surfaces.push(...surfacesOf(title.container, `title:${m.id}`))
       title.unmount()
     }

@@ -10,12 +10,12 @@ import { RegionTitle } from '../src/territory/RegionTitle'
 import { Tally } from '../src/territory/Tally'
 import { placePlaces } from '../src/world/geography'
 
-const rect = { x: 0, y: 0, w: 1170, h: 2532 }
+const rect = { x: 0, y: 0, w: 546, h: 3376 }
 
 describe('territory renders the canon character-exact', () => {
   for (const movement of canon.movements) {
     const fragments = movement.fragments.map((n) => canon.fragments[n - 1]!)
-    const places = placePlaces({ cycle: 1, region: movement.id, rect, fragments, short: 390 })
+    const places = placePlaces({ cycle: 1, region: movement.id, rect, fragments, short: 390, viewH: 844 })
     for (const place of places) {
       it(`place ${place.n} (${movement.id})`, () => {
         const { container } = render(
@@ -31,7 +31,7 @@ describe('territory renders the canon character-exact', () => {
   }
 
   it('an unfound place shows its text and no seal', () => {
-    const places = placePlaces({ cycle: 1, region: 'mar', rect, fragments: canon.fragments.slice(0, 4), short: 390 })
+    const places = placePlaces({ cycle: 1, region: 'mar', rect, fragments: canon.fragments.slice(0, 4), short: 390, viewH: 844 })
     const { container } = render(
       <PlaceText place={places[0]!} status={{ n: 1, state: 'present', reveal: 1, found: false, stampedAt: null }} />,
     )
@@ -58,7 +58,7 @@ describe('territory renders the canon character-exact', () => {
 
   it('region titles keep the canon title verbatim', () => {
     for (const m of canon.movements) {
-      const { container, unmount } = render(<RegionTitle region={m.id} x={0} y={0} />)
+      const { container, unmount } = render(<RegionTitle region={m.id} />)
       expect(container.querySelector('[data-canon="movement-title"]')?.textContent).toBe(m.title)
       unmount()
     }

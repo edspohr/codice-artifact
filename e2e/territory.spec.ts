@@ -66,11 +66,86 @@ test.describe('territory: entry and the linear path', () => {
     const s = await cdp(page)
     await tap(s, { x: viewport!.width / 2, y: viewport!.height * 0.7 })
     await expect(page.locator('.territory')).toHaveAttribute('data-phase', 'territory')
-    // Mar's title appears over the ground on entering.
+    // Mar's title appears alone on entering, then dissolves.
     await expect(page.locator('.region-title[data-movement="mar"] [data-canon="movement-title"]')).toHaveText(
       canon.movements[0]!.title,
     )
+    // No place is in view at the start: dense ink, nothing scattered.
+    await page.waitForTimeout(800)
+    await expect(page.locator('.place')).toHaveCount(0)
+    await expect(page.locator('.region-title')).toHaveCount(0, { timeout: 6000 })
+    await expect(page.locator('.place')).toHaveCount(0)
     await expectNoPageScroll(page)
+  })
+
+  test('a title and a fragment are never on screen together', async ({ page, viewport }) => {
+    await page.goto(BASE)
+    await ready(page)
+    const s = await cdp(page)
+    await tap(s, { x: viewport!.width / 2, y: viewport!.height * 0.7 })
+    // Ask for the first place immediately: it must wait for the title to dissolve.
+    await page.keyboard.press('ArrowRight')
+    let sawTitle = false
+    let sawPlace = false
+    for (let i = 0; i < 70; i++) {
+      const [titles, places] = await Promise.all([page.locator('.region-title').count(), page.locator('.place').count()])
+      if (titles > 0) sawTitle = true
+      if (places > 0) sawPlace = true
+      expect(titles > 0 && places > 0, 'title and fragment co-present').toBe(false)
+      await page.waitForTimeout(100)
+    }
+    expect(sawTitle).toBe(true)
+    expect(sawPlace).toBe(true)
+  })
+
+  test('on arrival the world comes to rest with the whole text block and the seal inside safe margins', async ({ page, viewport }) => {
+    await page.goto(BASE)
+    await ready(page)
+    for (const n of [1, 2]) {
+      await page.keyboard.press('ArrowRight')
+      const place = page.locator(`.place[data-n="${n}"]`)
+      await expect(place).toHaveAttribute('data-state', 'found', { timeout: 8000 })
+      await expect.poll(() => page.evaluate(() => window.__codice!.territory!.territory.isResting()), { timeout: 5000 }).toBe(true)
+      const text = (await place.locator('[data-canon="fragment"]').boundingBox())!
+      const seal = (await place.locator('.place__seal').boundingBox())!
+      const m = 27
+      for (const box of [text, seal]) {
+        expect(box.x).toBeGreaterThanOrEqual(m)
+        expect(box.y).toBeGreaterThanOrEqual(m)
+        expect(box.x + box.width).toBeLessThanOrEqual(viewport!.width - m)
+        expect(box.y + box.height).toBeLessThanOrEqual(viewport!.height - m)
+      }
+    }
+  })
+
+  test('the ascent is readable in any still screenshot: lighter toward the top', async ({ page, viewport }) => {
+    // No places emerge in this test so the ground alone is measured.
+    await page.goto(`${BASE}&cfg.EMERGE_DISTANCE=0&cfg.ARRIVE_DISTANCE=0&cfg.MAR_CURRENT_SPEED=0`)
+    await ready(page)
+    const s = await cdp(page)
+    await tap(s, { x: viewport!.width / 2, y: viewport!.height * 0.7 })
+    await expect(page.locator('.region-title')).toHaveCount(0, { timeout: 6000 })
+    const w = viewport!.width
+    const h = viewport!.height
+    for (const f of [0.95, 0.75, 0.5, 0.3, 0.1]) {
+      const bands = await page.evaluate(
+        ([f, w, h]) => {
+          const t = window.__codice!.territory!.territory
+          const region = t.world.regions[0]!.rect
+          t.camera.x = region.x + region.w / 2
+          t.camera.y = region.y + region.h * f
+          t.glideTo({ x: t.camera.x, y: t.camera.y })
+          const mean = (yFrac: number) => {
+            let sum = 0
+            for (let i = 1; i <= 10; i++) sum += t.readPixel((w * i) / 11, h * yFrac)[0]
+            return sum / 10
+          }
+          return { top: (mean(0.05) + mean(0.15)) / 2, bottom: (mean(0.85) + mean(0.95)) / 2 }
+        },
+        [f, w, h] as const,
+      )
+      expect(bands.top, `camera at ${f} of the channel`).toBeGreaterThan(bands.bottom + 6)
+    }
   })
 
   test('Avanzar travels place by place in canonical order, character-exact, then to the threshold', async ({ page }) => {
@@ -90,7 +165,7 @@ test.describe('territory: entry and the linear path', () => {
       await expect(place).toHaveAttribute('data-state', 'found', { timeout: 5000 })
       const lines = await place.locator('[data-canon="fragment"] [data-canon-line]').allTextContents()
       expect(lines).toEqual(canon.fragments[n - 1]!.lines)
-      await expect(place.locator('[data-seal]')).toHaveText(canon.fragments[n - 1]!.seal)
+      await expect(place.locator('[data-seal]')).toHaveText(canon.fragments[n - 1]!.seal, { timeout: 8000 })
       // Focus moved to the text for assistive tech.
       await expect.poll(() => page.evaluate(() => document.activeElement?.getAttribute('data-n'))).toBe(String(n))
       // Whatever is mounted is emerging, present or found: never a hidden place.
@@ -112,10 +187,9 @@ test.describe('territory: entry and the linear path', () => {
     await expect(page.locator('.region-title[data-movement="tierra"] [data-canon="movement-title"]')).toHaveText(
       canon.movements[1]!.title,
     )
-    // Volver goes back down.
+    // Volver goes back down (after Tierra's title event has dissolved).
     await page.keyboard.press('ArrowLeft')
-    await page.waitForTimeout(1200)
-    expect(await page.locator('.territory').getAttribute('data-region')).toBe('mar')
+    await expect.poll(() => page.locator('.territory').getAttribute('data-region'), { timeout: 10_000 }).toBe('mar')
     await expectNoPageScroll(page)
   })
 
@@ -143,8 +217,9 @@ test.describe('territory: touch', () => {
     await swipe(s, { x: w * 0.8, y: h * 0.5 }, { x: w * 0.2, y: h * 0.5 }, 20, 16)
     await page.waitForTimeout(100)
     const after = await cameraOf(page)
-    // The finger went left 0.6·w; the world followed to the right by roughly traction × that, plus inertia.
-    expect(after.x - before.x).toBeGreaterThan(w * 0.6 * 0.4)
+    // The finger went left 0.6·w; the world followed to the right by roughly traction × that
+    // (less toward the bank), plus inertia.
+    expect(after.x - before.x).toBeGreaterThan(w * 0.6 * 0.25)
     expect(after.x - before.x).toBeLessThan(w * 0.6 * 1.6)
     await swipe(s, { x: w * 0.5, y: h * 0.3 }, { x: w * 0.5, y: h * 0.9 }, 20, 16)
     await page.waitForTimeout(300)
@@ -158,7 +233,7 @@ test.describe('territory: touch', () => {
     const w = viewport!.width
     const h = viewport!.height
     await tap(s, { x: w / 2, y: h / 2 })
-    await page.waitForTimeout(2000)
+    await expect(page.locator('.region-title')).toHaveCount(0, { timeout: 6000 })
     // Sample a row across the dense lower ink before and after scrubbing it.
     const sampleRow = () =>
       page.evaluate(([w, h]) => {
@@ -178,13 +253,13 @@ test.describe('territory: touch', () => {
   })
 
   test('the ink parts around text: contrast under a place stays above 4.5:1 even after scrubbing it', async ({ page, viewport }) => {
-    await page.goto(`${BASE}&cfg.MAR_CURRENT_SPEED=0&cfg.MAR_TRACTION=0.2&place=2`)
+    await page.goto(`${BASE}&cfg.MAR_CURRENT_SPEED=0&cfg.MAR_TRACTION=0.2`)
     await ready(page)
-    await page.waitForTimeout(1600)
     await page.keyboard.press('ArrowRight')
     await page.keyboard.press('ArrowRight')
     const place = page.locator('.place[data-n="2"]')
-    await expect(place).toHaveAttribute('data-state', 'found', { timeout: 5000 })
+    await expect(place).toHaveAttribute('data-state', 'found', { timeout: 12000 })
+    await expect.poll(() => page.evaluate(() => window.__codice!.territory!.territory.isResting()), { timeout: 5000 }).toBe(true)
     const box = (await place.locator('[data-canon="fragment"]').boundingBox())!
     const s = await cdp(page)
     const w = viewport!.width
@@ -231,11 +306,11 @@ test.describe('territory: touch', () => {
     await page.evaluate(() => {
       const t = window.__codice!.territory!.territory
       const p = t.world.places.find((x) => x.n === 3)!
-      const side = p.x > 585 ? -1 : 1
-      t.camera.x = p.x + side * t.world.short * 0.4
-      t.camera.y = p.y
-      t.glideTo({ x: t.camera.x, y: p.y })
+      t.camera.x = p.x
+      t.camera.y = p.y + t.world.short * 0.4
+      t.glideTo({ x: p.x, y: t.camera.y })
     })
+    await expect(page.locator('.region-title')).toHaveCount(0, { timeout: 6000 })
     await expect(page.locator('.place[data-n="3"]')).toHaveAttribute('data-state', 'present', { timeout: 5000 })
     const farFrom3 = () => {
       const t = window.__codice!.territory!.territory
@@ -263,9 +338,8 @@ test.describe('territory: touch', () => {
     await page.evaluate(() => {
       const t = window.__codice!.territory!.territory
       const p = t.world.places.find((x) => x.n === 3)!
-      const side = p.x > 585 ? -1 : 1
-      t.camera.x = p.x + side * t.world.short * 0.4
-      t.camera.y = p.y
+      t.camera.x = p.x
+      t.camera.y = p.y + t.world.short * 0.4
       t.glideTo({ x: p.x, y: p.y })
     })
     await expect(page.locator('.place[data-n="3"]')).toHaveAttribute('data-state', 'found', { timeout: 5000 })

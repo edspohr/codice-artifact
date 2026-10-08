@@ -6,7 +6,12 @@ declare global {
       territory: {
         territory: {
           camera: { x: number; y: number }
-          world: { short: number; places: Array<{ n: number; x: number; y: number }> }
+          world: {
+            short: number
+            places: Array<{ n: number; x: number; y: number }>
+            regions: Array<{ id: string; rect: { x: number; y: number; w: number; h: number } }>
+          }
+          isResting(): boolean
           glideTo(to: { x: number; y: number }, onDone?: () => void): void
           readPixel(sx: number, sy: number): [number, number, number]
           getOpen(): number
