@@ -33,8 +33,12 @@ The epigraph alone on white. The first touch is the first mark (and, if sound is
 
 - One continuous field of ink, larger than the screen, with **four regions stacked from bottom to top: Mar Primigenio → Tierra Herida → Cordillera Silente → Cielo Inconquistable.** This is the Ascent made into a place: ink is dense and dark low in Mar and rises, lightens and dissolves into smoke toward Cielo.
 - The visitor moves by dragging the world. There are no views, no stations, no menu, no map, no index and no URLs.
-- Size is a tuning value; start with each region a few screens wide and a few screens tall on a phone, and adjust with the author.
+- **A region is a channel, not a field.** About 1.4 screens wide by 4 tall on a phone (tunable). There is lateral play, but the way is up. The channel has banks: toward the sides the ink thins and resistance grows, and a return current keeps the visitor in. There is no white void beyond the field.
+- **The ascent is readable without words.** Ink is darkest at the bottom and lighter toward the top, and its grain runs up the channel. A single still screenshot taken anywhere must tell which way is up. The current runs up the channel: letting go carries the visitor slowly upward.
+- **Ink is the ground; places are clearings.** In Mar the ink covers the field with true near-blacks. White exists only as the clearings where places live and as the lightening toward the top. Procedural or generated ink has pooled blacks, dry-brush streaks, granulation, hard and soft edges: never blurred noise, never uniform mid-grey. A visitor's mark must read even in dense ink: displaced ink leaves paler furrows with darker ridges.
+- The start is at the bottom, in dense dark ink, with no place in view.
 - **Geography belongs to the cycle.** The positions of the 22 places are derived deterministically from the cycle number (seeded), so every Return rearranges the world. Constraints: places stay inside their region, keep a minimum distance from each other and from edges, and fragment 22 always sits at the far top of Cielo.
+- **Soft canonical bias.** Within a region, places are loosely ordered along the ascent by canonical number, with seeded jitter, alternating sides of the channel. The first place of a region lies within about one screen of its entry. Order stays free: nothing forces the sequence.
 
 ### 3.3 Each region has its own physics
 
@@ -54,12 +58,17 @@ The four gestures of the old concept become four ways of moving. **Starting hypo
 - A fragment is a location in its region, **hidden** until the visitor comes near. On approach the text emerges (its ink gathers); the transition is brief and resolves to fully legible. At rest a fragment is either absent or fully legible, never half-shown.
 - On arrival **the seal is stamped**: it was not there before. One stamp, with weight (visual impact; a short vibration where the device supports it; a note if sound is on). Stamped seals persist for the session.
 - Each place has its own local ink formation (its lámina) blended into the ground, with no edges.
-- **The text reacts as matter, by region and always legible:** in Mar it sways with the current; in Tierra the block shears along the cracks the visitor makes; in Cordillera it settles with weight; in Cielo its ink thins (never below the contrast floor).
+- **The text reacts as matter, by region and always legible:** in Mar it sways with the current; in Tierra the block shears along the cracks the visitor makes; in Cordillera it settles with weight; in Cielo its ink thins (never below the contrast floor). Text reactions stay within the motion budget below.
 - Order is free inside a region.
+- **Movement between places, stillness at them.** On arrival the current deposits the visitor: the world comes to rest with the whole text block inside safe margins and the seal in view. Text is never clipped at rest. Leaving takes a deliberate drag, not a stray touch.
+- **One sequence on arrival and nothing else moving:** the clearing opens, the text settles, the stamp lands.
+- **A clearing never reads as a card.** No rectangles and no perfect circles anywhere: an irregular, soft-edged void shaped from the text block but not outlining it. Place formations use irregular masks, not radial blobs.
+- **Motion budget.** Outside clearings only the drag and the current move. Text sway is off by default (kept behind an override).
 
 ### 3.5 Regions in order, thresholds and the tally
 
 - Regions are crossed in order. The passage up to the next region is a **threshold** at the top of each region, crossed with that region's own physics at full expression. Entering a region shows its **movement title** over the ground (typography per spec §5.1).
+- **The title is an event, not an object.** It appears alone on entering the region and dissolves before any place can emerge. A title and a fragment are never on screen together.
 - A threshold is **always passable**: the journey never requires completeness.
 - **The tally** is the only indication of progress in the whole piece. At each threshold there is one seal impression per fragment of the region being left: **inked with its numeral if the visitor found it, blind (embossed, uninked, no numeral) if not.** No numbers, no words, no bar. A visitor who wants everything sees what is missing and goes back; anyone else walks on.
 
@@ -83,7 +92,7 @@ The four gestures of the old concept become four ways of moving. **Starting hypo
 
 ### 3.9 Subtle help
 
-Demanding, with subtle help, and never in words. When a visitor has found nothing for a long while (and especially in a virgin cycle, when there are no trails), the ground leans: the grain of the ink drifts faintly toward the nearest unfound place. Tunable and easy to miss on purpose.
+Demanding, with subtle help, and never in words. The current and the grain of the ink bend toward the nearest unfound place (the help bias): strong enough to be felt and visible in the grain itself, never a pointer. When a visitor has found nothing for a long while (and especially in a virgin cycle, when there are no trails), the lean grows. Tunable; zero disables it.
 
 ### 3.10 Sound (experimental, behind a config flag)
 
