@@ -28,6 +28,9 @@ export function PlaceText({ place, status }: { place: Place; status: PlaceStatus
         top: `${place.y}px`,
         ['--emerge-ms' as string]: `${config.EMERGE_MS}ms`,
         ['--disperse-ms' as string]: `${config.DISPERSE_MS}ms`,
+        ['--clear-open-ms' as string]: `${config.CLEAR_OPEN_MS}ms`,
+        ['--text-settle-ms' as string]: `${config.TEXT_SETTLE_MS}ms`,
+        ['--stamp-delay-ms' as string]: `${config.CLEAR_OPEN_MS + config.TEXT_SETTLE_MS + config.STAMP_DELAY_MS}ms`,
       }}
     >
       <div className="place__text" data-canon="fragment" data-n={place.n} data-clear tabIndex={-1} ref={ref}>

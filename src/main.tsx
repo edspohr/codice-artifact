@@ -28,7 +28,10 @@ if (!container) throw new Error('missing #root')
 const TerritoryApp = lazy(() => import('./territory/TerritoryApp'))
 const revealAll = import.meta.env.DEV && params.get('reveal') === '1'
 
-createRoot(container).render(
+// One root per container, even if this module is evaluated twice (dev reloads).
+const rootHolder = window as unknown as { __codiceRoot?: ReturnType<typeof createRoot> }
+const root = (rootHolder.__codiceRoot ??= createRoot(container))
+root.render(
   <StrictMode>
     {prototype ? (
       <Suspense fallback={null}>

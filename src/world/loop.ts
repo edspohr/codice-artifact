@@ -10,6 +10,7 @@ import { Places } from './places'
 import { Sound } from './sound'
 import { territoryStore } from './territoryStore'
 import { PointerInput, type DragSample } from './input'
+import type { MovementId } from '../content/canon'
 import type { Place, Vec2, World } from './types'
 
 export interface TerritoryElements {
@@ -61,6 +62,15 @@ export class Territory {
   private onStampCb: ((place: Place) => void) | undefined
   private dpr = 1
   private destroyed = false
+  // The title is an event: nothing emerges until it has dissolved.
+  private titleEndsAt = 0
+  private titlesShown = new Set<MovementId>()
+  private deferredArrivals: number[] = []
+  // Composure: the current deposits the visitor at a place; leaving takes a deliberate drag.
+  private pendingSettle: number | null = null
+  private settleTries = 0
+  private resting = false
+  private departAccum = 0
 
   constructor(els: TerritoryElements, opts: TerritoryOptions) {
     this.els = els
@@ -121,11 +131,16 @@ export class Territory {
     this.showTitle('mar', now)
   }
 
-  private showTitle(region: 'mar', now: number) {
-    // World-anchored where the visitor entered: left and high in the viewport (spec §5.1, Mar).
-    const x = this.camera.left + this.world.short * 0.08
-    const y = this.camera.top + this.camera.viewH * 0.09
-    territoryStore.addTitle(region, x, y, now)
+  /** The title is an event: it appears alone on entering a region and dissolves before any place can emerge. */
+  private showTitle(region: MovementId, now: number) {
+    if (this.titlesShown.has(region)) return
+    this.titlesShown.add(region)
+    this.titleEndsAt = now + config.TITLE_IN_MS + config.TITLE_HOLD_MS + config.TITLE_OUT_MS
+    territoryStore.setTitle({ region, startedAt: now })
+  }
+
+  get titleActive() {
+    return performance.now() < this.titleEndsAt
   }
 
   // --- input ------------------------------------------------------------------
@@ -133,9 +148,11 @@ export class Territory {
   private onStart(s: DragSample) {
     const now = performance.now()
     this.glide = null
+    this.pendingSettle = null
     this.sound.unlock()
     if (territoryStore.get().phase === 'epigraph') this.openTerritory(now)
-    this.physics.touchStart(now)
+    this.departAccum = 0
+    if (!this.resting) this.physics.touchStart(now)
     this.lastDragT = s.t
     this.sound.noteOn(this.height())
     this.wake()
@@ -143,6 +160,13 @@ export class Territory {
 
   private onMove(s: DragSample, prev: DragSample) {
     const dt = Math.max(1, s.t - prev.t)
+    if (this.resting) {
+      // At a place the world is still: a stray touch does not move it. A deliberate drag does.
+      this.departAccum += Math.hypot(s.x - prev.x, s.y - prev.y)
+      if (this.departAccum < config.DEPART_PX) return
+      this.resting = false
+      this.physics.touchStart(s.t)
+    }
     const slip = this.physics.drag(s.x, s.y, s.x - prev.x, s.y - prev.y, dt, s.t)
     // Accumulate slip into one brush segment per frame.
     if (this.pendingSlip) {
@@ -157,7 +181,7 @@ export class Territory {
   }
 
   private onEnd() {
-    this.physics.touchEnd(performance.now())
+    if (!this.resting) this.physics.touchEnd(performance.now())
     this.sound.noteOff()
     this.wake()
   }
@@ -181,25 +205,93 @@ export class Territory {
     this.sound.stamp(this.height())
     this.ink.bake(place, config.FORMATION_RADIUS * this.world.short)
     this.onStampCb?.(place)
+    // The current deposits the visitor: come to rest with the whole text block and the seal in view.
+    // Not while a glide is in flight: the linear path settles at its own destination.
+    if (!this.glide) this.settleAt(place.n)
     this.wake()
+  }
+
+  /** Measure the mounted place (text + seal) and glide so it sits inside the safe margins. */
+  private trySettle(now: number) {
+    const n = this.pendingSettle
+    if (n === null) return
+    const el = this.els.stage.querySelector<HTMLElement>(`.place[data-n="${n}"]`)
+    const seal = el?.querySelector<HTMLElement>('.place__seal')
+    const text = el?.querySelector<HTMLElement>('[data-canon="fragment"]')
+    if (!el || !text || (!seal && this.settleTries < 12)) {
+      this.settleTries++
+      return
+    }
+    this.pendingSettle = null
+    const stage = this.els.stage.getBoundingClientRect()
+    const rects = [text.getBoundingClientRect(), ...(seal ? [seal.getBoundingClientRect()] : [])]
+    const left = Math.min(...rects.map((r) => r.left)) - stage.left
+    const right = Math.max(...rects.map((r) => r.right)) - stage.left
+    const top = Math.min(...rects.map((r) => r.top)) - stage.top
+    const bottom = Math.max(...rects.map((r) => r.bottom)) - stage.top
+    const m = config.SAFE_MARGIN_PX
+    let dx = 0
+    let dy = 0
+    if (right - left > this.camera.viewW - 2 * m) {
+      // The block cannot fit with both margins: centre it, the text keeps its margins first.
+      dx = (left + right) / 2 - this.camera.viewW / 2
+    } else if (left < m) dx = left - m
+    else if (right > this.camera.viewW - m) dx = right - (this.camera.viewW - m)
+    if (top < m) dy = top - m
+    else if (bottom > this.camera.viewH - m) dy = bottom - (this.camera.viewH - m)
+    // Prefer centring the block vertically when there is room.
+    const blockH = bottom - top
+    if (blockH < this.camera.viewH - 2 * m) {
+      const wantTop = (this.camera.viewH - blockH) / 2
+      dy = top - wantTop
+    }
+    const reduced = session.get().reducedMotion
+    const from = { x: this.camera.x, y: this.camera.y }
+    const to = { x: this.camera.x + dx, y: this.camera.y + dy }
+    this.glide = { from, to, start: now, duration: reduced ? 0 : config.SETTLE_MS, onDone: () => { this.resting = true } }
   }
 
   // --- linear path -------------------------------------------------------------
 
-  /** Glide the viewpoint to a world point (instant with reduced motion). */
+  /** Glide the viewpoint to a world point (instant with reduced motion). Waits for a title event to end. */
   glideTo(to: Vec2, onDone?: () => void) {
     const now = performance.now()
     if (territoryStore.get().phase === 'epigraph') this.openTerritory(now)
     this.camera.vx = 0
     this.camera.vy = 0
+    this.resting = false
+    this.pendingSettle = null
     const reduced = session.get().reducedMotion
-    this.glide = { from: { x: this.camera.x, y: this.camera.y }, to, start: now, duration: reduced ? 0 : config.GLIDE_MS, onDone }
+    const start = Math.max(now, this.titleEndsAt)
+    this.glide = { from: { x: this.camera.x, y: this.camera.y }, to, start, duration: reduced ? 0 : config.GLIDE_MS, onDone }
     this.wake()
   }
 
-  /** Arrive at a place through the linear path. */
+  /** Arrive at a place through the linear path. Deferred while a title is on screen. */
   arriveAt(n: number) {
+    if (this.titleActive) {
+      if (!this.deferredArrivals.includes(n)) this.deferredArrivals.push(n)
+      this.wake()
+      return
+    }
     this.places.arrive(n, performance.now())
+    this.settleAt(n)
+    this.wake()
+  }
+
+  /** Stillness: the world does not move until a deliberate drag. */
+  rest() {
+    this.camera.vx = 0
+    this.camera.vy = 0
+    this.resting = true
+  }
+
+  /** Come to rest at a place (even one stamped earlier, or stamped while gliding in). */
+  settleAt(n: number) {
+    this.camera.vx = 0
+    this.camera.vy = 0
+    this.pendingSettle = n
+    this.settleTries = 0
     this.wake()
   }
 
@@ -237,6 +329,22 @@ export class Territory {
 
   private readonly frame = (now: number) => {
     if (this.destroyed) return
+    try {
+      this.tick(now)
+    } catch (err) {
+      // A frame must never kill the loop. Log once per second at most.
+      if (now - this.lastErrorAt > 1000) {
+        console.error('[territory] frame error', err)
+        this.lastErrorAt = now
+      }
+      this.running = false
+      this.idleTimer = window.setTimeout(() => this.wake(), 250)
+    }
+  }
+
+  private lastErrorAt = -Infinity
+
+  private tick(now: number) {
     const dt = Math.min(64, Math.max(1, now - this.lastFrame))
     this.lastFrame = now
     let active = false
@@ -248,18 +356,38 @@ export class Territory {
       active = true
     }
 
-    // Glide (linear path) or physics.
+    // The title event ends: remove it, release deferred arrivals.
+    const title = territoryStore.get().title
+    if (title && now >= this.titleEndsAt) {
+      territoryStore.setTitle(null)
+      for (const n of this.deferredArrivals.splice(0)) this.places.arrive(n, now)
+    }
+    if (title) active = true
+
+    // Settle at a stamped place once its text and seal are mounted.
+    if (this.pendingSettle !== null) {
+      this.trySettle(now)
+      active = true
+    }
+
+    // Glide (linear path or settle), stillness at a place, or physics.
     if (this.glide) {
       const g = this.glide
-      const t = g.duration > 0 ? Math.min(1, (now - g.start) / g.duration) : 1
-      const e = 1 - Math.pow(1 - t, 3)
-      this.camera.x = g.from.x + (g.to.x - g.from.x) * e
-      this.camera.y = g.from.y + (g.to.y - g.from.y) * e
-      this.camera.clamp()
-      if (t >= 1) {
-        this.glide = null
-        g.onDone?.()
-      } else active = true
+      if (now < g.start) {
+        active = true
+      } else {
+        const t = g.duration > 0 ? Math.min(1, (now - g.start) / g.duration) : 1
+        const e = 1 - Math.pow(1 - t, 3)
+        this.camera.x = g.from.x + (g.to.x - g.from.x) * e
+        this.camera.y = g.from.y + (g.to.y - g.from.y) * e
+        this.camera.clamp()
+        if (t >= 1) {
+          this.glide = null
+          g.onDone?.()
+        } else active = true
+      }
+    } else if (this.resting) {
+      // Stillness at the place: nothing moves until a deliberate drag.
     } else if (this.input.down) {
       active = true
     } else {
@@ -267,13 +395,16 @@ export class Territory {
       if (this.physics.step(dt, now, nearest)) active = true
     }
 
-    // Region (stub above the threshold).
+    // Region (stub above the threshold). Entering a region is a title event.
     const mar = this.world.regions[0]?.rect
     const region = mar && this.camera.y < mar.y ? 'stub' : 'mar'
-    if (territoryStore.get().region !== region) territoryStore.patch({ region })
+    if (territoryStore.get().region !== region) {
+      territoryStore.patch({ region })
+      if (region === 'stub') this.showTitle('tierra', now)
+    }
 
-    // Places.
-    if (this.open > 0 || this.revealAll) {
+    // Places: nothing emerges while a title is on screen.
+    if ((this.open > 0 || this.revealAll) && !this.titleActive) {
       if (this.places.update({ x: this.camera.x, y: this.camera.y }, dt, now, this.revealAll)) active = true
     }
 
@@ -332,12 +463,19 @@ export class Territory {
       const s = this.places.get(p.n)
       return { x: p.x, y: p.y, radius: config.FORMATION_RADIUS * this.world.short, reveal: s.found ? 0 : s.reveal }
     })
+    const help = config.MAR_HELP_BIAS > 0 ? this.places.nearestUnfound({ x: this.camera.x, y: this.camera.y }) : null
     this.ink.render(
       { x: this.camera.left, y: this.camera.top, w: this.camera.viewW, h: this.camera.viewH },
       this.revealAll && this.open <= 0 ? 1 : this.open,
       placeUniforms,
       this.clears,
+      help,
     )
+  }
+
+  /** Dev/test: whether the viewpoint is at rest at a place. */
+  isResting() {
+    return this.resting
   }
 
   /** Dev/test: render now and read a screen pixel (top-down CSS px). */

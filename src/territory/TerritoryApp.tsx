@@ -78,10 +78,10 @@ export default function TerritoryApp({
 
   // After every render, tell the loop which text blocks the ink must part around.
   useEffect(() => {
-    const layer = layerRef.current
+    const stage = stageRef.current
     const handles = handlesRef.current
-    if (!layer || !handles) return
-    handles.territory.setClearElements(Array.from(layer.querySelectorAll<HTMLElement>('[data-clear]')))
+    if (!stage || !handles) return
+    handles.territory.setClearElements(Array.from(stage.querySelectorAll<HTMLElement>('[data-clear]')))
   })
 
   const world = snap.world
@@ -105,10 +105,8 @@ export default function TerritoryApp({
         canNext={ready && snap.linearIndex < stops - 1}
       />
       <canvas ref={canvasRef} className="ink" aria-hidden="true" />
+      {snap.title ? <RegionTitle key={snap.title.region} region={snap.title.region} /> : null}
       <div ref={layerRef} className="world-text">
-        {world
-          ? snap.titles.map((t) => <RegionTitle key={t.region} region={t.region} x={t.x} y={t.y} />)
-          : null}
         {world
           ? world.places.map((p) => {
               const s = snap.places[p.n]
@@ -117,13 +115,6 @@ export default function TerritoryApp({
             })
           : null}
         {world ? world.thresholds.map((th) => <Tally key={th.from} threshold={th} found={found} />) : null}
-        {world && world.thresholds[0] ? (
-          <RegionTitle
-            region="tierra"
-            x={world.width / 2}
-            y={world.thresholds[0].band.y - (stageRef.current?.clientHeight ?? 800) * 0.75}
-          />
-        ) : null}
       </div>
       <div className="epigraph-veil" data-canon="epigraph" aria-hidden={snap.phase !== 'epigraph'}>
         <CanonLines lines={canon.epigraph} />

@@ -10,6 +10,7 @@ export function Tally({ threshold, found }: { threshold: Threshold; found: Reado
     <div
       className="tally"
       data-threshold={threshold.from}
+      data-clear
       style={{ left: `${threshold.band.x + threshold.band.w / 2}px`, top: `${threshold.band.y + threshold.band.h / 2}px` }}
     >
       {threshold.fragments.map((n) => {

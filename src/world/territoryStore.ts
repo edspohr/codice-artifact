@@ -12,8 +12,8 @@ export interface TerritorySnapshot {
   phase: Phase
   world: World | null
   places: Record<number, PlaceStatus>
-  /** Regions whose title has been shown, with the world position where it appeared. */
-  titles: Array<{ region: MovementId; x: number; y: number; at: number }>
+  /** The title event, if one is on screen: it appears alone on entering a region and dissolves. */
+  title: { region: MovementId; startedAt: number } | null
   /** Which region the viewpoint is in ('stub' above Mar's threshold). */
   region: MovementId | 'stub'
   revealAll: boolean
@@ -25,7 +25,7 @@ let snapshot: TerritorySnapshot = {
   phase: 'epigraph',
   world: null,
   places: {},
-  titles: [],
+  title: null,
   region: 'mar',
   revealAll: false,
   linearIndex: 0,
@@ -47,9 +47,8 @@ export const territoryStore = {
     snapshot = { ...snapshot, places: { ...snapshot.places, [status.n]: status } }
     emit()
   },
-  addTitle(region: MovementId, x: number, y: number, at: number) {
-    if (snapshot.titles.some((t) => t.region === region)) return
-    snapshot = { ...snapshot, titles: [...snapshot.titles, { region, x, y, at }] }
+  setTitle(title: { region: MovementId; startedAt: number } | null) {
+    snapshot = { ...snapshot, title }
     emit()
   },
   subscribe(l: () => void) {
@@ -59,7 +58,7 @@ export const territoryStore = {
     }
   },
   reset() {
-    snapshot = { phase: 'epigraph', world: null, places: {}, titles: [], region: 'mar', revealAll: false, linearIndex: 0 }
+    snapshot = { phase: 'epigraph', world: null, places: {}, title: null, region: 'mar', revealAll: false, linearIndex: 0 }
     emit()
   },
 }

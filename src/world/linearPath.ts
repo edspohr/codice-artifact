@@ -44,7 +44,7 @@ export class LinearPath {
     const t = this.territory
     switch (stop.kind) {
       case 'epigraph':
-        t.glideTo(t.world.start)
+        t.glideTo(t.world.start, () => t.rest())
         break
       case 'place': {
         const p = t.world.places.find((x) => x.n === stop.n)
@@ -59,13 +59,14 @@ export class LinearPath {
         break
       }
       case 'threshold': {
+        // Frame the tally from inside Mar: the band's centre is the region boundary.
         const th = t.world.thresholds[0]
-        if (th) t.glideTo({ x: th.band.x + th.band.w / 2, y: th.band.y + th.band.h / 2 })
+        if (th) t.glideTo({ x: th.band.x + th.band.w / 2, y: th.band.y + th.band.h / 2 + t.camera.viewH * 0.22 }, () => t.rest())
         break
       }
       case 'stub': {
         const th = t.world.thresholds[0]
-        if (th) t.glideTo({ x: th.band.x + th.band.w / 2, y: th.band.y - t.camera.viewH * 0.6 })
+        if (th) t.glideTo({ x: th.band.x + th.band.w / 2, y: th.band.y - t.camera.viewH * 0.6 }, () => t.rest())
         break
       }
     }

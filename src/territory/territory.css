@@ -47,10 +47,11 @@
 
 .place {
   position: absolute;
-  width: min(30rem, 78vw);
+  width: min(30rem, 74vw);
   transform: translate(-50%, -50%);
   opacity: 0;
-  transition: opacity var(--emerge-ms, 700ms) ease-out;
+  /* The arrival sequence: the clearing opens first, then the text settles. */
+  transition: opacity var(--text-settle-ms, 500ms) ease-out var(--clear-open-ms, 600ms);
 }
 .place[data-state='emerging'],
 .place[data-state='present'],
@@ -74,11 +75,12 @@
 
 .place__seal {
   position: absolute;
-  right: 0;
+  right: 0.75rem;
   top: 100%;
   margin-top: 0.8rem;
   opacity: var(--pressure, 1);
-  animation: stamp var(--stamp-ms, 480ms) cubic-bezier(0.2, 0.9, 0.3, 1) both;
+  /* The stamp lands last. */
+  animation: stamp var(--stamp-ms, 480ms) cubic-bezier(0.2, 0.9, 0.3, 1) var(--stamp-delay-ms, 0ms) both;
 }
 @keyframes stamp {
   0% {
@@ -118,11 +120,14 @@
   background: radial-gradient(60% 45% at 30% 35%, rgba(22, 22, 22, 0.05), transparent 70%);
 }
 
-/* --- titles ----------------------------------------------------------------- */
+/* --- titles: events, screen-anchored ---------------------------------------- */
 
 .region-title {
   position: absolute;
-  animation: title-in var(--title-fade-ms, 1400ms) ease-out both;
+  pointer-events: none;
+  animation:
+    title-in var(--title-in-ms, 700ms) ease-out both,
+    title-out var(--title-out-ms, 900ms) ease-in calc(var(--title-in-ms, 700ms) + var(--title-hold-ms, 1800ms)) both;
 }
 @keyframes title-in {
   from {
@@ -130,6 +135,14 @@
   }
   to {
     opacity: 1;
+  }
+}
+@keyframes title-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
   }
 }
 .region-title .movement-title {
@@ -142,11 +155,17 @@
   color: var(--ink);
   white-space: nowrap;
 }
+.region-title[data-movement='mar'] {
+  top: calc(env(safe-area-inset-top, 0px) + 9vh);
+  left: var(--gutter);
+}
 .region-title[data-movement='mar'] .movement-title {
   font-weight: 300;
   letter-spacing: 0.22em;
 }
 .region-title[data-movement='tierra'] {
+  top: calc(env(safe-area-inset-top, 0px) + 9vh);
+  left: 50%;
   transform: translate(-50%, 0);
 }
 .region-title[data-movement='tierra'] .movement-title {
@@ -185,7 +204,10 @@
     animation: none;
   }
   .region-title {
-    animation-duration: 200ms;
+    animation-duration: 200ms, 200ms;
+  }
+  .place {
+    transition-delay: 0ms;
   }
   .epigraph-veil {
     transition-duration: 200ms;
