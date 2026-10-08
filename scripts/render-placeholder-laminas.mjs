@@ -125,8 +125,8 @@ async function render(file, register, seed, t) {
 // formation is a place's local ink with an irregular, soft mask: never a
 // radial blob, never a rectangle.
 
-const GROUND_W = 1024
-const GROUND_H = 2048
+const GROUND_W = 640
+const GROUND_H = 2560 // a channel, 1:4
 const FORM_SIZE = 512
 
 function edgeFade(u, v, width) {
@@ -135,14 +135,39 @@ function edgeFade(u, v, width) {
   return fx * fy
 }
 
+// Fine, hard speckle for granulation.
+function speckle(x, y, seed) {
+  return hash2(x, y, seed)
+}
+
 const grounds = {
-  // Mar: ink dense low, void above; a nascent crack; everything fades at the edges.
-  mar(u, v, seed) {
-    const mass = smoothstep(0.5, 0.86, v)
-    const grain = fbm(u * 4 + 11, v * 7, seed, 6, 0.55)
-    const lift = fbm(u * 2.5, v * 1.5, seed + 3, 3, 0.5)
-    const vein = 1 - 0.6 * Math.exp(-Math.pow((u - 0.5 - 0.15 * fbm(v * 2, 0, seed + 7, 3, 0.5)) * 12, 2)) * smoothstep(0.6, 0.95, v)
-    return Math.min(1, 0.82 * mass * (0.4 + 0.6 * grain) * (0.65 + 0.5 * lift) * vein) * edgeFade(u, v, 0.08)
+  // Mar inverted: ink is the ground. Darkest at the bottom with true
+  // near-blacks, lightening toward the top; pooled blacks with hard edges,
+  // dry-brush streaks running up the channel, granulation; thinner ink
+  // toward the banks. White exists only as the clearings where places
+  // live, and as the lightening at the top.
+  mar(u, v, seed, px, py) {
+    const side = Math.abs(u - 0.5) * 2 // 0 centre, 1 edge
+    // Readable ascent: the gradient alone must tell which way is up.
+    const gradient = 0.22 + 0.78 * Math.pow(smoothstep(0.0, 1.0, v), 0.85)
+    // Banks: the ink thins toward the sides.
+    const bank = 1 - 0.5 * smoothstep(0.5, 1.0, side)
+    // Soft blotches (wet edges).
+    const soft = 0.82 + 0.36 * fbm(u * 2.5 + 3, v * 9, seed + 1, 3, 0.5)
+    // Pooled blacks with hard edges, denser low.
+    const poolField = fbm(u * 3.2, v * 11, seed + 5, 4, 0.5)
+    const pools = smoothstep(0.52, 0.56, poolField) * smoothstep(0.15, 0.7, v)
+    // Dry-brush streaks: stretched vertically, hard-thresholded, lighter and darker.
+    const streakField = fbm(u * 70, v * 5, seed + 9, 3, 0.62)
+    const streakLight = smoothstep(0.3, 0.42, 1 - streakField) * 0.55
+    const streakDark = smoothstep(0.6, 0.72, streakField) * 0.25
+    // Granulation.
+    const grain = (speckle(px, py, seed + 13) - 0.5) * 0.1
+    let d = gradient * bank * soft
+    d = d * (1 - streakLight * (1 - v * 0.3)) + streakDark * d
+    d = Math.max(d, pools * 0.98 * bank)
+    d += grain
+    return Math.max(0, Math.min(1, d))
   },
 }
 
@@ -171,8 +196,8 @@ async function renderGround(file, register, seed) {
     const v = y / GROUND_H
     for (let x = 0; x < GROUND_W; x++) {
       const u = x / GROUND_W
-      const ink = Math.max(0, Math.min(1, grounds[register](u, v, seed)))
-      buf[y * GROUND_W + x] = Math.round(255 * (1 - 0.92 * ink))
+      const ink = Math.max(0, Math.min(1, grounds[register](u, v, seed, x, y)))
+      buf[y * GROUND_W + x] = Math.round(255 * (1 - 0.97 * ink))
     }
   }
   await sharp(buf, { raw: { width: GROUND_W, height: GROUND_H, channels: 1 } }).webp({ quality: 70, effort: 4 }).toFile(file)

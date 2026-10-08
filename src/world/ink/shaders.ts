@@ -96,7 +96,11 @@ void main() {
 }
 `
 
-/** Semi-Lagrangian advection of ink along the velocity, then slow drying back to the ground. */
+/**
+ * Semi-Lagrangian advection of ink along the velocity, displacement under
+ * the brush (a paler furrow, darker ridges beside it, so a mark reads even
+ * in dense ink), then slow drying back to the ground.
+ */
 export const ADVECT_FRAG = `
 precision mediump float;
 varying vec2 vUv;
@@ -107,14 +111,34 @@ uniform vec2 uSim;
 uniform float uDt;
 uniform float uVelMax;
 uniform float uDryRate; // per second
+uniform float uBrushOn;
+uniform vec4 uBrush;        // segment a.xy b.xy in texels
+uniform float uBrushRadius; // texels
+uniform float uFurrow;
+
+float segDist(vec2 p, vec2 a, vec2 b) {
+  vec2 ab = b - a;
+  float len2 = max(dot(ab, ab), 1e-4);
+  float t = clamp(dot(p - a, ab) / len2, 0.0, 1.0);
+  return length(p - (a + ab * t));
+}
+
 void main() {
   vec4 s = texture2D(uVI, vUv);
   vec2 v = (s.rg - 0.5) * 2.0 * uVelMax;      // texels/s
   vec2 back = vUv - (v * uDt) / uSim;
   float d = texture2D(uDensity, back).r;
   float g = texture2D(uGround, vUv).r;
+  if (uBrushOn > 0.5 && uFurrow > 0.0) {
+    vec2 p = vUv * uSim;
+    float dist = segDist(p, uBrush.xy, uBrush.zw);
+    float r = max(1.0, uBrushRadius);
+    float furrow = exp(-(dist * dist) / (r * r * 0.45));
+    float ring = exp(-pow((dist - 1.25 * r) / (0.55 * r), 2.0));
+    d += uFurrow * (ring * 0.35 * g - furrow * 0.5 * d);
+  }
   d = mix(d, g, 1.0 - exp(-uDryRate * uDt));
-  gl_FragColor = vec4(d, 0.0, 0.0, 1.0);
+  gl_FragColor = vec4(clamp(d, 0.0, 1.0), 0.0, 0.0, 1.0);
 }
 `
 
@@ -143,6 +167,9 @@ uniform int uClearCount;
 uniform vec3 uClearParams; // margin px, soft px, irregularity
 uniform float uClearResidual;
 uniform float uNoiseScale; // world px per noise tile
+uniform vec4 uHelp;        // target x, y, bias, active
+uniform vec3 uGrain;       // strength, wiggle, wavelength (px)
+uniform float uShort;
 
 float formation(sampler2D img, vec4 place, vec2 p) {
   if (place.w <= 0.001) return 0.0;
@@ -161,6 +188,22 @@ void main() {
   float d = texture2D(uDensity, uv).r;
   float g = texture2D(uGround, uv).r;
   float ins = texture2D(uVI, uv).b;
+
+  // The grain of the ink runs up the channel and bends, faintly, toward the
+  // nearest unfound place: the same direction as the current.
+  if (uGrain.x > 0.0) {
+    float wiggle = uGrain.y * sin((p.y / uGrain.z) * 2.1 + 0.7 + cos((p.x / uGrain.z) * 1.3));
+    vec2 dir = vec2(wiggle, -1.0);
+    if (uHelp.w > 0.5 && uHelp.z > 0.0) {
+      vec2 to = normalize(uHelp.xy - p + vec2(1e-3));
+      dir = dir * (1.0 - uHelp.z) + to * uHelp.z;
+    }
+    dir = normalize(dir);
+    vec2 perp = vec2(-dir.y, dir.x);
+    vec2 q = vec2(dot(p, perp) / (uShort * 0.022), dot(p, dir) / (uShort * 0.55));
+    float streak = texture2D(uNoise, q / 64.0).a;
+    d = clamp(d + (streak - 0.5) * uGrain.x * d, 0.0, 1.0);
+  }
 
   float f = 0.0;
   f = 1.0 - (1.0 - f) * (1.0 - formation(uForm0, uPlace[0], p));

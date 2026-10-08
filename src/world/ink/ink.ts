@@ -72,11 +72,13 @@ export class Ink {
     this.progVel = createProgram(gl, VERT, VEL_FRAG, [
       'uVI', 'uSim', 'uDt', 'uVelDecay', 'uVelMax', 'uBrushOn', 'uBrush', 'uBrushVel', 'uBrushRadius', 'uBrushStrength', 'uInsRate', 'uInsDecay',
     ])
-    this.progAdvect = createProgram(gl, VERT, ADVECT_FRAG, ['uDensity', 'uVI', 'uGround', 'uSim', 'uDt', 'uVelMax', 'uDryRate'])
+    this.progAdvect = createProgram(gl, VERT, ADVECT_FRAG, [
+      'uDensity', 'uVI', 'uGround', 'uSim', 'uDt', 'uVelMax', 'uDryRate', 'uBrushOn', 'uBrush', 'uBrushRadius', 'uFurrow',
+    ])
     this.progComposite = createProgram(gl, VERT, COMPOSITE_FRAG, [
       'uDensity', 'uGround', 'uVI', 'uNoise', 'uForm0', 'uForm1', 'uForm2', 'uForm3',
       'uPlace[0]', 'uView', 'uWorld', 'uOpen', 'uPaper', 'uInk', 'uAccentColor', 'uAccent',
-      'uClear[0]', 'uClearCount', 'uClearParams', 'uClearResidual', 'uNoiseScale',
+      'uClear[0]', 'uClearCount', 'uClearParams', 'uClearResidual', 'uNoiseScale', 'uHelp', 'uGrain', 'uShort',
     ])
     this.noise = createTexture(gl, NOISE_SIZE, NOISE_SIZE, noiseTextureData(), gl.REPEAT)
     this.groundImg = createTexture(gl, 0, 0, assets.ground)
@@ -192,12 +194,17 @@ export class Ink {
     gl.uniform1f(a.uDt ?? null, dt)
     gl.uniform1f(a.uVelMax ?? null, VEL_MAX)
     gl.uniform1f(a.uDryRate ?? null, config.INK_DRY_S > 0 ? 1 / config.INK_DRY_S : 0)
+    gl.uniform1f(a.uBrushOn ?? null, brush ? 1 : 0)
+    if (brush) gl.uniform4f(a.uBrush ?? null, brush.ax * sx, brush.ay * sy, brush.bx * sx, brush.by * sy)
+    else gl.uniform4f(a.uBrush ?? null, 0, 0, 0, 0)
+    gl.uniform1f(a.uBrushRadius ?? null, config.BRUSH_RADIUS * this.world.short * sx)
+    gl.uniform1f(a.uFurrow ?? null, config.FURROW_STRENGTH)
     drawQuad(gl, this.quad, this.progAdvect.attrib)
     this.density.swap()
   }
 
-  /** Draw the viewport. `view` is the camera rect in world px. */
-  render(view: Rect, open: number, places: PlaceUniform[], clears: ClearBox[]) {
+  /** Draw the viewport. `view` is the camera rect in world px. `help` is the nearest unfound place, if any. */
+  render(view: Rect, open: number, places: PlaceUniform[], clears: ClearBox[], help: { x: number; y: number } | null) {
     const gl = this.gl
     const canvas = this.canvas
     gl.bindFramebuffer(gl.FRAMEBUFFER, null)
@@ -240,6 +247,9 @@ export class Ink {
     gl.uniform3f(u.uClearParams ?? null, config.CLEAR_MARGIN * short, config.CLEAR_SOFT * short, config.CLEAR_IRREGULARITY)
     gl.uniform1f(u.uClearResidual ?? null, config.CLEAR_RESIDUAL)
     gl.uniform1f(u.uNoiseScale ?? null, short * 0.9)
+    gl.uniform4f(u.uHelp ?? null, help ? help.x : 0, help ? help.y : 0, config.MAR_HELP_BIAS, help ? 1 : 0)
+    gl.uniform3f(u.uGrain ?? null, config.GRAIN_STRENGTH, config.MAR_CURRENT_WIGGLE, Math.max(50, config.MAR_CURRENT_SCALE))
+    gl.uniform1f(u.uShort ?? null, short)
     drawQuad(gl, this.quad, this.progComposite.attrib)
   }
 
