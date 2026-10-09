@@ -5,6 +5,8 @@ import { fileURLToPath } from 'node:url'
 import { cdp, stroke, swipe, tap } from './touch.ts'
 
 interface Canon {
+  title: string
+  author: string
   epigraph: string[]
   movements: Array<{ id: string; title: string; fragments: number[] }>
   fragments: Array<{ n: number; seal: string; lines: string[] }>
@@ -19,6 +21,22 @@ const BASE = '/?proto=territory&cfg.SOUND_ENABLED=0'
 async function ready(page: Page) {
   await expect(page.locator('.territory[data-ready]')).toHaveCount(1, { timeout: 15_000 })
   await page.evaluate(() => document.fonts.ready)
+}
+
+/** Cover → epigraph with one click (mouse works on every project). */
+async function toEpigraph(page: Page) {
+  const v = page.viewportSize()!
+  await page.mouse.click(v.width / 2, v.height * 0.7)
+  await expect(page.locator('.territory')).toHaveAttribute('data-phase', 'epigraph')
+  await page.waitForTimeout(300)
+}
+
+/** Cover → epigraph → territory, by mouse. */
+async function enter(page: Page) {
+  await toEpigraph(page)
+  const v = page.viewportSize()!
+  await page.mouse.click(v.width / 2, v.height * 0.7)
+  await expect(page.locator('.territory')).toHaveAttribute('data-phase', 'territory')
 }
 
 async function expectNoPageScroll(page: Page) {
@@ -54,9 +72,24 @@ function contrast(a: [number, number, number], b: [number, number, number]) {
 }
 
 test.describe('territory: entry and the linear path', () => {
+  test('the cover: the title of the work and the stamped signature; a touch dissolves it', async ({ page }) => {
+    await page.goto(BASE)
+    await ready(page)
+    expect(await page.locator('.territory').getAttribute('data-phase')).toBe('cover')
+    await expect(page.locator('.cover [data-canon="work-title"]')).toHaveText(canon.title)
+    await expect(page.locator('.cover img.cover__signature')).toHaveAttribute('alt', canon.author)
+    // Nothing else is on screen: no place, no title event, the epigraph hidden.
+    await expect(page.locator('.place')).toHaveCount(0)
+    await expect(page.locator('.region-title')).toHaveCount(0)
+    await expect(page.locator('.epigraph-veil')).toHaveAttribute('aria-hidden', 'true')
+    await toEpigraph(page)
+    await expect(page.locator('.cover')).toHaveCount(0, { timeout: 5000 })
+  })
+
   test('the epigraph alone on white; a touch opens the territory', async ({ page, viewport }) => {
     await page.goto(BASE)
     await ready(page)
+    await toEpigraph(page)
     const lines = await page.locator('.epigraph-veil [data-canon-line]').allTextContents()
     expect(lines).toEqual(canon.epigraph)
     expect(await page.locator('.territory').getAttribute('data-phase')).toBe('epigraph')
@@ -78,11 +111,10 @@ test.describe('territory: entry and the linear path', () => {
     await expectNoPageScroll(page)
   })
 
-  test('a title and a fragment are never on screen together', async ({ page, viewport }) => {
+  test('a title and a fragment are never on screen together', async ({ page }) => {
     await page.goto(BASE)
     await ready(page)
-    const s = await cdp(page)
-    await tap(s, { x: viewport!.width / 2, y: viewport!.height * 0.7 })
+    await enter(page)
     // Ask for the first place immediately: it must wait for the title to dissolve.
     await page.keyboard.press('ArrowRight')
     let sawTitle = false
@@ -101,6 +133,7 @@ test.describe('territory: entry and the linear path', () => {
   test('on arrival the world comes to rest with the whole text block and the seal inside safe margins', async ({ page, viewport }) => {
     await page.goto(BASE)
     await ready(page)
+    await enter(page)
     for (const n of [1, 2]) {
       await page.keyboard.press('ArrowRight')
       const place = page.locator(`.place[data-n="${n}"]`)
@@ -122,8 +155,7 @@ test.describe('territory: entry and the linear path', () => {
     // No places emerge in this test so the ground alone is measured.
     await page.goto(`${BASE}&cfg.EMERGE_DISTANCE=0&cfg.ARRIVE_DISTANCE=0&cfg.MAR_CURRENT_SPEED=0`)
     await ready(page)
-    const s = await cdp(page)
-    await tap(s, { x: viewport!.width / 2, y: viewport!.height * 0.7 })
+    await enter(page)
     await expect(page.locator('.region-title')).toHaveCount(0, { timeout: 6000 })
     const w = viewport!.width
     const h = viewport!.height
@@ -137,10 +169,11 @@ test.describe('territory: entry and the linear path', () => {
           t.glideTo({ x: t.camera.x, y: t.camera.y })
           const mean = (yFrac: number) => {
             let sum = 0
-            for (let i = 1; i <= 10; i++) sum += t.readPixel((w * i) / 11, h * yFrac)[0]
-            return sum / 10
+            for (let i = 1; i <= 16; i++) sum += t.readPixel((w * i) / 17, h * yFrac)[0]
+            return sum / 16
           }
-          return { top: (mean(0.05) + mean(0.15)) / 2, bottom: (mean(0.85) + mean(0.95)) / 2 }
+          const band = (a: number, b: number, c: number) => (mean(a) + mean(b) + mean(c)) / 3
+          return { top: band(0.04, 0.1, 0.16), bottom: band(0.84, 0.9, 0.96) }
         },
         [f, w, h] as const,
       )
@@ -158,6 +191,9 @@ test.describe('territory: entry and the linear path', () => {
     await expect(back).toBeDisabled()
     // Hidden places do not exist in the DOM.
     await expect(page.locator('.place')).toHaveCount(0)
+    // Cover → epigraph by the linear path.
+    await page.keyboard.press('ArrowRight')
+    await expect(page.locator('.territory')).toHaveAttribute('data-phase', 'epigraph')
 
     for (const n of canon.movements[0]!.fragments) {
       await page.keyboard.press('ArrowRight')
@@ -173,10 +209,12 @@ test.describe('territory: entry and the linear path', () => {
         expect(state).not.toBe('hidden')
       }
     }
-    // Threshold: four inked impressions, in order, nothing blind.
+    // The closing of Mar: its title with four inked impressions beneath, in order, nothing blind.
     await page.keyboard.press('ArrowRight')
     await page.waitForTimeout(1200)
-    const tally = page.locator('.tally[data-threshold="mar"]')
+    const mark = page.locator('.threshold-mark[data-threshold="mar"]')
+    await expect(mark.locator('[data-canon="movement-title"]')).toHaveText(canon.movements[0]!.title)
+    const tally = mark.locator('.tally')
     await expect(tally.locator('.tally__impression')).toHaveCount(4)
     await expect(tally.locator('[data-inked]')).toHaveCount(4)
     expect(await tally.locator('[data-seal]').allTextContents()).toEqual(['I', 'II', 'III', 'IV'])
@@ -194,7 +232,7 @@ test.describe('territory: entry and the linear path', () => {
   })
 
   test('the tally shows blind impressions for places not found', async ({ page }) => {
-    await page.goto(`${BASE}&stop=5`)
+    await page.goto(`${BASE}&stop=6`)
     await ready(page)
     await page.waitForTimeout(1500)
     const tally = page.locator('.tally[data-threshold="mar"]')
@@ -212,6 +250,10 @@ test.describe('territory: touch', () => {
     const w = viewport!.width
     const h = viewport!.height
     await tap(s, { x: w / 2, y: h / 2 })
+    await expect(page.locator('.territory')).toHaveAttribute('data-phase', 'epigraph')
+    await page.waitForTimeout(300)
+    await tap(s, { x: w / 2, y: h / 2 })
+    await expect(page.locator('.territory')).toHaveAttribute('data-phase', 'territory')
     await page.waitForTimeout(300)
     const before = await cameraOf(page)
     await swipe(s, { x: w * 0.8, y: h * 0.5 }, { x: w * 0.2, y: h * 0.5 }, 20, 16)
@@ -232,7 +274,7 @@ test.describe('territory: touch', () => {
     const s = await cdp(page)
     const w = viewport!.width
     const h = viewport!.height
-    await tap(s, { x: w / 2, y: h / 2 })
+    await enter(page)
     await expect(page.locator('.region-title')).toHaveCount(0, { timeout: 6000 })
     // Sample a row across the dense lower ink before and after scrubbing it.
     const sampleRow = () =>
@@ -255,6 +297,7 @@ test.describe('territory: touch', () => {
   test('the ink parts around text: contrast under a place stays above 4.5:1 even after scrubbing it', async ({ page, viewport }) => {
     await page.goto(`${BASE}&cfg.MAR_CURRENT_SPEED=0&cfg.MAR_TRACTION=0.2`)
     await ready(page)
+    await enter(page)
     await page.keyboard.press('ArrowRight')
     await page.keyboard.press('ArrowRight')
     const place = page.locator('.place[data-n="2"]')
@@ -288,7 +331,7 @@ test.describe('territory: touch', () => {
     const s = await cdp(page)
     const w = viewport!.width
     const h = viewport!.height
-    await tap(s, { x: w / 2, y: h / 2 })
+    await enter(page)
     await page.waitForTimeout(300)
     const before = await cameraOf(page)
     await swipe(s, { x: w - 6, y: h * 0.5 }, { x: w * 0.2, y: h * 0.5 })
@@ -300,6 +343,7 @@ test.describe('territory: touch', () => {
   test('a place that emerges and is left disperses; a stamped one stays', async ({ page }) => {
     await page.goto(`${BASE}&cfg.MAR_CURRENT_SPEED=0&cfg.EMERGE_MS=100&cfg.DISPERSE_MS=100`)
     await ready(page)
+    await enter(page)
     // Jump the viewpoint near place 3 (outside the arrival radius, inside emergence) without
     // crossing it on the way, then glide away, then onto it.
     // Approach from the side with room, so the clamped camera cannot land inside the arrival radius.

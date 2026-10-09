@@ -9,4 +9,7 @@ export default defineConfig({
     css: false,
     setupFiles: ['tests/setup.ts'],
   },
+  resolve: {
+    alias: [],
+  },
 })

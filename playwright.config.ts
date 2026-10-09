@@ -42,5 +42,16 @@ export default defineConfig({
         hasTouch: true,
       },
     },
+    {
+      // Desktop: the same territory by mouse, wheel and keyboard. Touch-only tests are skipped.
+      name: 'desktop-1280x800',
+      testMatch: /territory\.spec\.ts/,
+      grep: /entry and the linear path/,
+      use: {
+        browserName: 'chromium',
+        viewport: { width: 1280, height: 800 },
+        deviceScaleFactor: 1,
+      },
+    },
   ],
 })

@@ -223,6 +223,7 @@ test.describe('gestures on touch', () => {
 
   test('Cielo: a keyboard user is never auto-advanced', async ({ page }) => {
     await page.goto('/?station=frag:17&cfg.CIELO_DWELL_BASE_MS=100&cfg.CIELO_DWELL_PER_WORD_MS=0&cfg.CIELO_STILL_MS=100&cfg.CIELO_FADE_MS=200')
+    await expect(page.locator('.stage')).toHaveAttribute('data-station', 'frag:17')
     await page.keyboard.press('ArrowRight')
     await expect(page.locator('.stage')).toHaveAttribute('data-station', 'frag:18')
     await page.waitForTimeout(1500)

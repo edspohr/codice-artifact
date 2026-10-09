@@ -9,9 +9,11 @@ import { describe, expect, it } from 'vitest'
 import { canon } from '../src/content/canon'
 import { copy } from '../src/content/copy.es'
 import { journey } from '../src/content/journey'
+import { Cover } from '../src/territory/Cover'
 import { PlaceText } from '../src/territory/PlaceText'
 import { RegionTitle } from '../src/territory/RegionTitle'
 import { Tally } from '../src/territory/Tally'
+import { ThresholdMark } from '../src/territory/ThresholdMark'
 import { StationView } from '../src/views/StationView'
 import { placePlaces } from '../src/world/geography'
 
@@ -119,7 +121,7 @@ describe('appendix terms never surface', () => {
     const rect = { x: 0, y: 0, w: 546, h: 3376 }
     for (const m of canon.movements) {
       const fragments = m.fragments.map((n) => canon.fragments[n - 1]!)
-      for (const place of placePlaces({ cycle: 1, region: m.id, rect, fragments, short: 390, viewH: 844 })) {
+      for (const place of placePlaces({ cycle: 1, region: m.id, rect, fragments, short: 390, viewH: 844, viewW: 390 })) {
         const { container, unmount } = render(
           <PlaceText place={place} status={{ n: place.n, state: 'found', reveal: 1, found: true, stampedAt: 0 }} />,
         )
@@ -133,6 +135,13 @@ describe('appendix terms never surface', () => {
     const tally = render(<Tally threshold={{ from: 'mar', band: rect, fragments: [1, 2, 3, 4] }} found={new Set([1, 3])} />)
     surfaces.push(...surfacesOf(tally.container, 'tally'))
     tally.unmount()
+    const mark = render(<ThresholdMark threshold={{ from: 'mar', band: rect, fragments: [1, 2, 3, 4] }} found={new Set([2])} />)
+    surfaces.push(...surfacesOf(mark.container, 'threshold-mark'))
+    mark.unmount()
+    const cover = render(<Cover dismissed={false} />)
+    // The cover's title and the signature's alt are canon (title, author): exclude those two values.
+    surfaces.push(...surfacesOf(cover.container, 'cover').filter(([, v]) => v !== canon.title && v !== canon.author))
+    cover.unmount()
     const offending: string[] = []
     for (const term of terms) {
       const re = matcher(term)

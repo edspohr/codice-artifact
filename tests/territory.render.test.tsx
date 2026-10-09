@@ -5,9 +5,11 @@ import { render } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { Seal } from '../src/components/Seal'
 import { canon } from '../src/content/canon'
+import { Cover } from '../src/territory/Cover'
 import { PlaceText } from '../src/territory/PlaceText'
 import { RegionTitle } from '../src/territory/RegionTitle'
 import { Tally } from '../src/territory/Tally'
+import { ThresholdMark } from '../src/territory/ThresholdMark'
 import { placePlaces } from '../src/world/geography'
 
 const rect = { x: 0, y: 0, w: 546, h: 3376 }
@@ -15,7 +17,7 @@ const rect = { x: 0, y: 0, w: 546, h: 3376 }
 describe('territory renders the canon character-exact', () => {
   for (const movement of canon.movements) {
     const fragments = movement.fragments.map((n) => canon.fragments[n - 1]!)
-    const places = placePlaces({ cycle: 1, region: movement.id, rect, fragments, short: 390, viewH: 844 })
+    const places = placePlaces({ cycle: 1, region: movement.id, rect, fragments, short: 390, viewH: 844, viewW: 390 })
     for (const place of places) {
       it(`place ${place.n} (${movement.id})`, () => {
         const { container } = render(
@@ -31,7 +33,7 @@ describe('territory renders the canon character-exact', () => {
   }
 
   it('an unfound place shows its text and no seal', () => {
-    const places = placePlaces({ cycle: 1, region: 'mar', rect, fragments: canon.fragments.slice(0, 4), short: 390, viewH: 844 })
+    const places = placePlaces({ cycle: 1, region: 'mar', rect, fragments: canon.fragments.slice(0, 4), short: 390, viewH: 844, viewW: 390 })
     const { container } = render(
       <PlaceText place={places[0]!} status={{ n: 1, state: 'present', reveal: 1, found: false, stampedAt: null }} />,
     )
@@ -48,6 +50,23 @@ describe('territory renders the canon character-exact', () => {
     expect(Array.from(container.querySelectorAll('[data-seal]')).map((el) => el.textContent)).toEqual(['II', 'IV'])
     expect(container.querySelectorAll('.seal--blind')).toHaveLength(2)
     expect(container.textContent).toBe('IIIV')
+  })
+
+  it('the closing of a region shows its title verbatim with the tally beneath', () => {
+    const threshold = { from: 'mar' as const, band: { x: 0, y: 0, w: 546, h: 500 }, fragments: [1, 2, 3, 4] }
+    const { container } = render(<ThresholdMark threshold={threshold} found={new Set([1, 4])} />)
+    expect(container.querySelector('[data-canon="movement-title"]')?.textContent).toBe(canon.movements[0]!.title)
+    expect(container.querySelectorAll('.tally__impression')).toHaveLength(4)
+    expect(Array.from(container.querySelectorAll('[data-seal]')).map((el) => el.textContent)).toEqual(['I', 'IV'])
+    expect(container.querySelector('.threshold-mark')?.hasAttribute('data-clear')).toBe(true)
+  })
+
+  it('the cover carries the title of the work and the signature named after the author', () => {
+    const { container } = render(<Cover dismissed={false} />)
+    expect(container.querySelector('[data-canon="work-title"]')?.textContent).toBe(canon.title)
+    const img = container.querySelector('img.cover__signature')
+    expect(img?.getAttribute('alt')).toBe(canon.author)
+    expect(container.textContent).toBe(canon.title)
   })
 
   it('a blind seal never carries a numeral', () => {

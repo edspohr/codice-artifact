@@ -9,13 +9,13 @@ beforeEach(() => resetConfig())
 const marFragments = canon.fragments.slice(0, 4)
 const VIEW_W = 390
 const VIEW_H = 844
-const channel = { x: 0, y: 1266, w: Math.round(VIEW_W * 1.4), h: VIEW_H * 4 }
+const channel = { x: 0, y: 1266, w: Math.round(VIEW_W * 1.4), h: Math.round(VIEW_H * 5.5) }
 
 describe('geography', () => {
   it('is a deterministic function of the cycle', () => {
-    const a = placePlaces({ cycle: 1, region: 'mar', rect: channel, fragments: marFragments, short: VIEW_W, viewH: VIEW_H })
-    const b = placePlaces({ cycle: 1, region: 'mar', rect: channel, fragments: marFragments, short: VIEW_W, viewH: VIEW_H })
-    const c = placePlaces({ cycle: 2, region: 'mar', rect: channel, fragments: marFragments, short: VIEW_W, viewH: VIEW_H })
+    const a = placePlaces({ cycle: 1, region: 'mar', rect: channel, fragments: marFragments, short: VIEW_W, viewH: VIEW_H, viewW: VIEW_W })
+    const b = placePlaces({ cycle: 1, region: 'mar', rect: channel, fragments: marFragments, short: VIEW_W, viewH: VIEW_H, viewW: VIEW_W })
+    const c = placePlaces({ cycle: 2, region: 'mar', rect: channel, fragments: marFragments, short: VIEW_W, viewH: VIEW_H, viewW: VIEW_W })
     expect(a.map((p) => [p.x, p.y])).toEqual(b.map((p) => [p.x, p.y]))
     expect(a.map((p) => [p.x, p.y])).not.toEqual(c.map((p) => [p.x, p.y]))
     expect(a.map((p) => p.stamp)).toEqual(b.map((p) => p.stamp))
@@ -23,7 +23,7 @@ describe('geography', () => {
 
   it('keeps places inside the channel, off the edges and apart from each other', () => {
     for (const cycle of [1, 2, 3, 7, 42]) {
-      const places = placePlaces({ cycle, region: 'mar', rect: channel, fragments: marFragments, short: VIEW_W, viewH: VIEW_H })
+      const places = placePlaces({ cycle, region: 'mar', rect: channel, fragments: marFragments, short: VIEW_W, viewH: VIEW_H, viewW: VIEW_W })
       const margin = config.PLACE_EDGE_MARGIN * VIEW_W
       for (const p of places) {
         expect(p.x).toBeGreaterThanOrEqual(channel.x + margin)
@@ -43,7 +43,7 @@ describe('geography', () => {
 
   it('orders places loosely along the ascent by canonical number, alternating sides', () => {
     for (const cycle of [1, 2, 3, 7, 42]) {
-      const places = placePlaces({ cycle, region: 'mar', rect: channel, fragments: marFragments, short: VIEW_W, viewH: VIEW_H })
+      const places = placePlaces({ cycle, region: 'mar', rect: channel, fragments: marFragments, short: VIEW_W, viewH: VIEW_H, viewW: VIEW_W })
       const centre = channel.x + channel.w / 2
       for (let i = 1; i < places.length; i++) {
         // Higher numbers sit higher (smaller y), with jitter well below the slot spacing.
@@ -73,18 +73,31 @@ describe('geography', () => {
   it('puts fragment 22 at the far top of its region', () => {
     const cielo = canon.fragments.slice(16, 22)
     const rect = { x: 0, y: 0, w: 546, h: VIEW_H * 4 }
-    const places = placePlaces({ cycle: 1, region: 'cielo', rect, fragments: cielo, short: VIEW_W, viewH: VIEW_H })
+    const places = placePlaces({ cycle: 1, region: 'cielo', rect, fragments: cielo, short: VIEW_W, viewH: VIEW_H, viewW: VIEW_W })
     const exit = places.find((p) => p.n === 22)!
     for (const p of places) if (p.n !== 22) expect(p.y).toBeGreaterThan(exit.y)
   })
 
-  it('builds Mar as a 1.4×4 channel with a stub above and the start at the bottom centre, in dense ink', () => {
+  it('builds Mar as a 1.4×5.5 channel with a stub above and the start at the bottom centre, in dense ink', () => {
     const w = buildWorld(VIEW_W, VIEW_H, 1)
-    expect(w.regions[0]!.rect).toEqual({ x: 0, y: 1266, w: 546, h: 3376 })
+    const marH = Math.round(VIEW_H * 5.5)
+    expect(w.regions[0]!.rect).toEqual({ x: 0, y: 1266, w: 546, h: marH })
     expect(w.width).toBe(546)
-    expect(w.height).toBe(1266 + 3376)
+    expect(w.height).toBe(1266 + marH)
     expect(w.places.map((p) => p.n)).toEqual([1, 2, 3, 4])
-    expect(w.start).toEqual({ x: 273, y: 1266 + 3376 - 422 })
+    expect(w.start).toEqual({ x: 273, y: 1266 + marH - 422 })
     expect(w.thresholds[0]!.fragments).toEqual([1, 2, 3, 4])
+  })
+
+  it('on a wide screen the world is never narrower than the viewport and places still fit the text block', () => {
+    const w = buildWorld(1280, 800, 1)
+    expect(w.width).toBeGreaterThanOrEqual(1280)
+    expect(w.short).toBe(400)
+    for (const p of w.places) {
+      expect(p.x - 240).toBeGreaterThanOrEqual(0)
+      expect(p.x + 240).toBeLessThanOrEqual(w.width)
+    }
+    // Still starts at the bottom centre with nothing in view.
+    for (const p of w.places) expect(p.y).toBeLessThan(w.start.y - 400)
   })
 })
