@@ -121,6 +121,25 @@
 .place__text .canon-line {
   color: var(--ink);
 }
+/* Cielo: the ink of the text thins with height (alpha floor set from the contrast floor). */
+.place[data-region='cielo'] .place__text .canon-line {
+  opacity: var(--thin, 1);
+}
+/* Cordillera: the text settles with weight as it arrives. */
+.place[data-region='cordillera'] .place__text {
+  animation: settle-weight 1100ms cubic-bezier(0.3, 0, 0.2, 1) both;
+}
+@keyframes settle-weight {
+  from {
+    translate: 0 -14px;
+  }
+  70% {
+    translate: 0 1px;
+  }
+  to {
+    translate: 0 0;
+  }
+}
 
 .place__seal {
   position: absolute;
@@ -490,6 +509,9 @@
   }
   .return {
     animation-duration: 200ms;
+  }
+  .place[data-region='cordillera'] .place__text {
+    animation: none;
   }
   .place {
     transition-delay: 0ms;

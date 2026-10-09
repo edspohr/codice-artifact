@@ -181,3 +181,92 @@ describe('Mar physics: traction', () => {
     expect(bandMove).toBeCloseTo(freeMove * (config.THRESHOLD_TRACTION / config.MAR_TRACTION), 3)
   })
 })
+
+describe('physics per region', () => {
+  function inRegion(id: 'cordillera' | 'cielo' | 'tierra') {
+    const world = buildWorld(390, 844, 1)
+    const camera = new Camera(world)
+    camera.setViewport(390, 844)
+    const r = world.regions.find((x) => x.id === id)!.rect
+    camera.x = r.x + r.w / 2
+    camera.y = r.y + r.h / 2
+    const physics = new MarPhysics(world, camera)
+    return { world, camera, physics }
+  }
+
+  it('Cordillera: no inertia, no current; up costs more than sideways', () => {
+    setConfig('MAR_LAG_MS', 0)
+    setConfig('BANK_RESISTANCE', 0)
+    const { camera, physics } = inRegion('cordillera')
+    physics.touchStart(0)
+    const x0 = camera.x
+    physics.drag(200, 400, 40, 0, 16, 16)
+    const sideways = Math.abs(camera.x - x0)
+    const y0 = camera.y
+    physics.drag(200, 400, 0, 40, 16, 32) // finger down: the world is pulled up
+    const up = Math.abs(camera.y - y0)
+    expect(up).toBeLessThan(sideways * 0.6)
+    physics.touchEnd(48)
+    expect(camera.vx).toBe(0)
+    expect(camera.vy).toBe(0)
+    const y1 = camera.y
+    physics.step(16, 64, null)
+    expect(camera.y).toBe(y1)
+  })
+
+  it('Cordillera: pulling up without pause tires, rest recovers', () => {
+    setConfig('MAR_LAG_MS', 0)
+    const { camera, physics } = inRegion('cordillera')
+    physics.touchStart(0)
+    const pull = () => {
+      const y = camera.y
+      physics.drag(200, 400, 0, 20, 16, 0)
+      return Math.abs(camera.y - y)
+    }
+    const fresh = pull()
+    for (let i = 0; i < 80; i++) pull()
+    const tired = pull()
+    expect(physics.fatigue).toBeGreaterThan(0.8)
+    expect(tired).toBeLessThan(fresh * 0.4)
+    physics.touchEnd(0)
+    for (let t = 0; t < 4000; t += 16) physics.step(16, t, null)
+    expect(physics.fatigue).toBe(0)
+    physics.touchStart(5000)
+    expect(pull()).toBeCloseTo(fresh, 3)
+  })
+
+  it('Cielo: little traction, a flick sustains a drift that slows to a minimum and only a touch stops', () => {
+    setConfig('MAR_LAG_MS', 0)
+    setConfig('BANK_RESISTANCE', 0)
+    const { camera, physics } = inRegion('cielo')
+    physics.touchStart(0)
+    const x0 = camera.x
+    physics.drag(200, 400, 40, 0, 16, 16)
+    expect(Math.abs(camera.x - x0)).toBeCloseTo(40 * config.CIELO_TRACTION, 3)
+    physics.drag(200, 400, 0, 30, 16, 32)
+    physics.touchEnd(48)
+    let t = 48
+    for (let i = 0; i < 2000; i++) {
+      t += 16
+      const moving = physics.step(16, t, null)
+      // The drift only ends at the top edge of the world (or with a touch).
+      if (!moving) {
+        expect(camera.y).toBeLessThanOrEqual(camera.viewH / 2 + 1)
+        break
+      }
+    }
+    const speed = Math.hypot(camera.vx, camera.vy) * 1000
+    // Either still drifting at least at the minimum speed, or stopped by the top edge of the world.
+    if (camera.y > camera.viewH / 2 + 1) expect(speed).toBeGreaterThanOrEqual(config.CIELO_MIN_SPEED - 1e-6)
+    physics.touchStart(t)
+    expect(camera.vx).toBe(0)
+    expect(camera.vy).toBe(0)
+  })
+
+  it('Tierra and the regions above Mar have no current', () => {
+    for (const id of ['tierra', 'cordillera', 'cielo'] as const) {
+      const { camera, physics } = inRegion(id)
+      expect(physics.currentSpeed(0, camera.y)).toBe(0)
+    }
+  })
+})

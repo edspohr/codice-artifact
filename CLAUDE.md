@@ -50,7 +50,9 @@ The four gestures of the old concept become four ways of moving. **Starting hypo
 | Mar | drag with long inertia; when you let go, slow currents keep carrying you | fluid, undivided |
 | Tierra | the ground is crusted; fracture lines block the way and yield only to insistence (strokes accumulate, one stroke is never enough) | effort, rupture |
 | Cordillera | drag with heavy resistance and no inertia; going up costs more than going sideways | weight, ascent |
-| Cielo | touch gives little traction; a light flick sets a direction and stillness sustains the drift; touching again stops it | release |
+| Cielo | touch gives little traction; a light flick sets a direction and stillness sustains the drift, slowing to a minimum but never stopping on its own; touching again stops it | release |
+
+Decided with the author: in Tierra, fracture lines across the channel close the way up; each finger stroke that crosses a line damages it, one stroke never breaks it, a standing line heals slowly, and a broken line stays broken for the session. In Cordillera, pulling up without pause tires (traction falls) and resting recovers, with no indicator.
 
 **You can go back, but you cannot undo.** Movement is free in every direction, including down into regions already crossed. What the visitor broke stays broken, what they smeared stays smeared, for the session.
 
@@ -72,7 +74,7 @@ The four gestures of the old concept become four ways of moving. **Starting hypo
 - Regions are crossed in order. The passage up to the next region is a **threshold** at the top of each region, crossed with that region's own physics at full expression. Entering a region shows its **movement title** over the ground (typography per spec §5.1).
 - **The title is an event, not an object.** It appears alone on entering the region and dissolves before any place can emerge. A title and a fragment are never on screen together.
 - **The closing of a region is an object.** At the threshold, anchored to the world, the region's title with the tally beneath it: the summary of what was done, and the passage. The ink parts around it.
-- **The threshold is a colossus.** A mass of ink at full expression across the band, crossed with the region's physics at their strongest (in Mar: the current at its fastest, less traction). Crossing a threshold upward for the first time, the viewpoint briefly looks back down the channel and returns. That is the only pulled-back view in the piece: never forward, never a map.
+- **The threshold is a colossus.** A mass of ink at full expression across the band, crossed with the region's physics at their strongest (in Mar: the current at its fastest, less traction). Crossing a threshold upward for the first time by the visitor's own movement, the viewpoint briefly looks back down the channel and returns (the linear path's glides do not). That is the only pulled-back view in the piece, and the only moment the DOM text is scaled: never forward, never a map.
 - A threshold is **always passable**: the journey never requires completeness.
 - **The tally** is the only indication of progress in the whole piece. At each threshold there is one seal impression per fragment of the region being left: **inked with its numeral if the visitor found it, blind (embossed, uninked, no numeral) if not.** No numbers, no words, no bar. A visitor who wants everything sees what is missing and goes back; anyone else walks on.
 

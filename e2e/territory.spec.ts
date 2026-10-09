@@ -457,11 +457,13 @@ test.describe('territory: touch', () => {
       [viewport!.width] as const,
     )
     for (const v of dark) expect(v).toBeLessThan(110)
-    // Cross upward: the look back plays once, zooming out and back.
-    await page.evaluate(() => {
-      const t = window.__codice!.territory!.territory
-      t.glideTo({ x: t.camera.x, y: t.camera.y - 900 })
-    })
+    // Cross upward by the visitor's own drag (a glide of the linear path never looks back).
+    const s = await cdp(page)
+    const h = viewport!.height
+    for (let i = 0; i < 3; i++) {
+      if ((await page.locator('.territory').getAttribute('data-region')) !== 'mar') break
+      await swipe(s, { x: viewport!.width / 2, y: h * 0.2 }, { x: viewport!.width / 2, y: h * 0.85 }, 14, 16)
+    }
     await expect.poll(() => page.evaluate(() => window.__codice!.territory!.territory.isLookingBack()), { timeout: 5000 }).toBe(true)
     await expect.poll(() => page.evaluate(() => window.__codice!.territory!.territory.currentZoom()), { timeout: 3000 }).toBeLessThan(0.6)
     await expect.poll(() => page.evaluate(() => window.__codice!.territory!.territory.isLookingBack()), { timeout: 5000 }).toBe(false)
@@ -515,6 +517,48 @@ test.describe('territory: touch', () => {
     for (let i = 0; i < 3; i++) await swipe(s, { x: w * 0.5, y: h * 0.25 }, { x: w * 0.5, y: h * 0.9 }, 14, 16)
     await page.waitForTimeout(400)
     expect((await cameraOf(page)).y).toBeLessThan(line.floor - 50)
+  })
+
+  test('Cielo: the highest text thins but stays above 4.5:1 over the ground beneath it', async ({ page }) => {
+    // The highest Cielo place other than the exit: stops are cover, epigraph, then 1–4, threshold, 5–10, threshold, 11–16, threshold, 17–22.
+    await page.goto(BASE)
+    await ready(page)
+    const n = await page.evaluate(() => {
+      const t = window.__codice!.territory!.territory
+      const cielo = t.world.places.filter((p) => p.n >= 17 && p.n <= 21)
+      return cielo.reduce((a, b) => (b.y < a.y ? b : a)).n
+    })
+    await page.goto(`${BASE}&stop=${21 + (n - 17)}`)
+    await ready(page)
+    const place = page.locator(`.place[data-n="${n}"]`)
+    await expect(place).toHaveAttribute('data-state', 'found', { timeout: 15_000 })
+    await expect.poll(() => page.evaluate(() => window.__codice!.territory!.territory.isResting()), { timeout: 8000 }).toBe(true)
+    const result = await page.evaluate((n) => {
+      const t = window.__codice!.territory!.territory
+      const lines = Array.from(document.querySelectorAll(`.place[data-n="${n}"] [data-canon-line]`)) as HTMLElement[]
+      const alpha = Number(getComputedStyle(lines[0]!).opacity)
+      const lum = ([r, g, b]: number[]) => {
+        const f = (c: number) => {
+          const v = c / 255
+          return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)
+        }
+        return 0.2126 * f(r!) + 0.7152 * f(g!) + 0.0722 * f(b!)
+      }
+      let worst = Infinity
+      for (const el of lines) {
+        const r = el.getBoundingClientRect()
+        for (const fx of [0.1, 0.5, 0.9]) {
+          const bg = t.readPixel(r.left + r.width * fx, r.top + r.height / 2)
+          const text = bg.map((c) => c + (22 - c) * alpha)
+          const a = lum(bg)
+          const b = lum(text)
+          worst = Math.min(worst, (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05))
+        }
+      }
+      return { alpha, worst }
+    }, n)
+    expect(result.alpha).toBeLessThan(1)
+    expect(result.worst).toBeGreaterThanOrEqual(4.5)
   })
 
   test('edge touches are ignored', async ({ page, viewport }) => {

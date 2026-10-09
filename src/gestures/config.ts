@@ -181,6 +181,25 @@ export const defaultConfig = {
   /** Text shears along nearby damaged lines (degrees at full damage). */
   TIERRA_SHEAR_DEG: 2.5,
 
+  // --- Cordillera: weight ---
+  /** Lateral traction; going up costs more (multiplier on upward traction). No inertia, no current. */
+  CORDILLERA_TRACTION: 0.6,
+  CORDILLERA_UP_COST: 0.45,
+  /** Fatigue: upward drag distance (px) that tires fully, the most traction it can take, recovery per second at rest. */
+  CORDILLERA_FATIGUE_PX: 1600,
+  CORDILLERA_FATIGUE_MAX: 0.85,
+  CORDILLERA_RECOVER_PER_S: 0.35,
+
+  // --- Cielo: release ---
+  /** Little traction; a flick sets a drift (gain on release) that stillness sustains. */
+  CIELO_TRACTION: 0.25,
+  CIELO_FLICK_GAIN: 2.5,
+  /** The drift slows (per ms) to a minimum speed (px/s) and only a touch stops it. */
+  CIELO_FRICTION: 0.0008,
+  CIELO_MIN_SPEED: 12,
+  /** Text in Cielo thins with height down to this alpha (never below the contrast floor). */
+  CIELO_TEXT_MIN_ALPHA: 0.66,
+
   // --- the exit (fragment 22) ---
   /** Reading dwell before stillness counts: base margin plus time per canon word (ms). */
   CIELO_DWELL_BASE_MS: 2500,

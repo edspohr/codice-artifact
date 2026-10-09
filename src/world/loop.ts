@@ -612,7 +612,8 @@ export class Territory {
     if (previous !== region) {
       territoryStore.patch({ region })
       const crossed = this.world.thresholds.findIndex((t) => t.from === previous && t.to === region)
-      if (crossed >= 0 && !this.lookedBack.has(previous) && config.LOOKBACK_ZOOM > 0 && config.LOOKBACK_MS > 0 && !session.get().reducedMotion) {
+      // Only the visitor's own crossing looks back; a glide of the linear path does not.
+      if (crossed >= 0 && !this.glide && !this.lookedBack.has(previous) && config.LOOKBACK_ZOOM > 0 && config.LOOKBACK_MS > 0 && !session.get().reducedMotion) {
         this.lookedBack.add(previous)
         this.lookback = { start: now, k: 0, threshold: crossed }
         this.camera.vx = 0
@@ -726,6 +727,19 @@ export class Territory {
     layer.style.setProperty('--open', (this.revealAll && this.open <= 0 ? 1 : this.open).toFixed(3))
     this.syncCrustSvg()
     this.syncShear(reduced)
+    this.syncThinning()
+  }
+
+  /** Cielo: the text's ink thins with height, never below the contrast floor. */
+  private syncThinning() {
+    const cielo = this.world.regions.find((r) => r.id === 'cielo')?.rect
+    if (!cielo) return
+    const min = Math.max(0, Math.min(1, config.CIELO_TEXT_MIN_ALPHA))
+    for (const el of this.els.textLayer.querySelectorAll<HTMLElement>('.place[data-region="cielo"]')) {
+      const y = Number(el.dataset.y)
+      const height = 1 - Math.max(0, Math.min(1, (y - cielo.y) / cielo.h)) // 0 at Cielo's floor, 1 at its top
+      el.style.setProperty('--thin', (1 - (1 - min) * height).toFixed(3))
+    }
   }
 
   /** Tierra: a text block shears along the damaged line nearest to it. */

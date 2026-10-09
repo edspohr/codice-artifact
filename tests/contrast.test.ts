@@ -52,7 +52,14 @@ describe('contrast floor', () => {
     expect(contrast(ink, accented)).toBeGreaterThanOrEqual(4.5)
   })
 
-  it('reports the lightest text tone allowed on paper (for Cielo thinning in Phase 3)', () => {
+  it("Cielo's thinned text stays above 4.5:1 on the worst cleared ground", () => {
+    const residual = defaultConfig.CLEAR_RESIDUAL
+    const ground = mix(paper, ink, residual)
+    const text = mix(ground, ink, defaultConfig.CIELO_TEXT_MIN_ALPHA)
+    expect(contrast(text, ground)).toBeGreaterThanOrEqual(4.5)
+  })
+
+  it('reports the lightest text tone allowed on paper', () => {
     // Walk the ink→paper mix until the contrast drops below 4.5: that mix is the floor.
     let t = 0
     while (t < 1 && contrast(mix(ink, paper, t), paper) >= 4.5) t += 0.01
