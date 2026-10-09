@@ -8,6 +8,7 @@ interface Canon {
   title: string
   author: string
   epigraph: string[]
+  reprise: string[]
   movements: Array<{ id: string; title: string; fragments: number[] }>
   fragments: Array<{ n: number; seal: string; lines: string[] }>
 }
@@ -232,6 +233,57 @@ test.describe('territory: entry and the linear path', () => {
     await page.keyboard.press('ArrowLeft')
     await expect.poll(() => page.locator('.territory').getAttribute('data-region'), { timeout: 10_000 }).toBe('mar')
     await expectNoPageScroll(page)
+  })
+
+  test('the exit: at 22 the Return can be stepped by the linear path, reprise verbatim, lone seal, Colofón', async ({ page }) => {
+    // Jump straight to the exit's stop (cover, epigraph, 22 places + 3 thresholds → index 26).
+    await page.goto(`${BASE}&stop=26`)
+    await ready(page)
+    const place = page.locator('.place[data-n="22"]')
+    await expect(place).toHaveAttribute('data-state', 'found', { timeout: 15_000 })
+    await expect(place.locator('[data-seal]')).toHaveText('0', { timeout: 8000 })
+    expect(await page.locator('.territory').getAttribute('data-region')).toBe('cielo')
+    // Cielo's tally sits beside the exit: one impression per fragment 17–21, blind unless passed through.
+    await expect(page.locator('.exit-tally .tally__impression')).toHaveCount(5)
+    const blind = await page.locator('.exit-tally .seal--blind').count()
+    const inked = await page.locator('.exit-tally [data-inked]').count()
+    expect(blind + inked).toBe(5)
+    await expect.poll(() => page.locator('.territory').getAttribute('data-exit'), { timeout: 8000 }).toBe('dwelling')
+    await page.keyboard.press('ArrowRight') // dissolution
+    await expect(page.locator('.territory')).toHaveAttribute('data-exit', 'dissolving')
+    await page.keyboard.press('ArrowRight') // reprise
+    await expect(page.locator('.territory')).toHaveAttribute('data-exit', 'reprise')
+    const lines = await page.locator('.return--reprise [data-canon-line]').allTextContents()
+    expect(lines).toEqual(canon.reprise)
+    // The territory has whitened beneath: no place text remains visible.
+    expect(await page.evaluate(() => getComputedStyle(document.querySelector('.world-text')!).opacity)).toBe('0')
+    // Volver cannot cross back over the dissolution.
+    await expect(page.getByRole('button', { name: 'Volver' })).toBeDisabled()
+    await page.keyboard.press('ArrowRight') // the lone seal
+    await expect(page.locator('.territory')).toHaveAttribute('data-exit', 'seal')
+    const seal = page.getByRole('button', { name: 'Colofón' })
+    await expect(seal).toBeVisible()
+    await expect(page.locator('.return--seal [data-seal]')).toHaveCount(0)
+    await seal.click()
+    await expect(page.locator('.territory')).toHaveAttribute('data-exit', 'colofon')
+    await expect(page.locator('.return--colofon a[href^="https://www.linkedin.com/"]')).toHaveCount(1)
+  })
+
+  test('the exit: stillness after the dwell dissolves; a touch during it restores the place', async ({ page, viewport }) => {
+    await page.goto(`${BASE}&stop=26&cfg.CIELO_DWELL_BASE_MS=800&cfg.CIELO_DWELL_PER_WORD_MS=0&cfg.CIELO_STILL_MS=3000&cfg.CIELO_FADE_MS=4000`)
+    await ready(page)
+    await expect(page.locator('.place[data-n="22"]')).toHaveAttribute('data-state', 'found', { timeout: 15_000 })
+    // The linear path marked the session keyboard-driven; a touch makes it a visitor again.
+    await page.evaluate(() => window.__codice!.session.patch({ keyboardUser: false }))
+    await expect.poll(() => page.locator('.territory').getAttribute('data-exit'), { timeout: 10_000 }).toBe('dissolving')
+    await page.waitForTimeout(1500)
+    const mid = await page.evaluate(() => (window.__codice!.territory!.territory as unknown as { getOpen(): number }).getOpen())
+    expect(mid).toBeLessThan(0.8)
+    const s = await cdp(page)
+    await tap(s, { x: viewport!.width / 2, y: viewport!.height * 0.9 })
+    await expect(page.locator('.territory')).toHaveAttribute('data-exit', 'dwelling')
+    await expect.poll(() => page.evaluate(() => (window.__codice!.territory!.territory as unknown as { getOpen(): number }).getOpen()), { timeout: 3000 }).toBeGreaterThan(0.95)
+    await expect(page.locator('.place[data-n="22"] [data-canon-line]').first()).toBeVisible()
   })
 
   test('the tally shows blind impressions for places not found', async ({ page }) => {

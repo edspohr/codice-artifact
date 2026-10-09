@@ -4,6 +4,7 @@
 import { session } from '../app/session'
 import { config } from '../gestures/config'
 import { Camera } from './camera'
+import { Exit } from './exit'
 import { Ink, type ClearBox, type InkAssets, type InkColors } from './ink/ink'
 import { MarPhysics, type Slip } from './physics'
 import { Places } from './places'
@@ -12,6 +13,7 @@ import { territoryStore } from './territoryStore'
 import { PointerInput, type DragSample } from './input'
 import type { MovementId } from '../content/canon'
 import type { Place, Rect, Vec2, World } from './types'
+import { fragmentWords } from './reading'
 import { regionAt } from './world'
 
 export interface TerritoryElements {
@@ -38,12 +40,15 @@ interface Glide {
 }
 
 export class Territory {
+  /** Live instances (dev/test): there must be exactly one. */
+  static live = 0
   readonly world: World
   readonly camera: Camera
   readonly physics: MarPhysics
   readonly places: Places
   readonly ink: Ink
   readonly sound = new Sound()
+  readonly exit = new Exit((s) => territoryStore.patch({ exit: s }))
   private input = new PointerInput()
   private els: TerritoryElements
   private raf = 0
@@ -87,6 +92,7 @@ export class Territory {
   private pendingTitle: MovementId | null = null
 
   constructor(els: TerritoryElements, opts: TerritoryOptions) {
+    Territory.live += 1
     this.els = els
     this.world = opts.world
     this.revealAll = opts.revealAll
@@ -142,6 +148,7 @@ export class Territory {
   }
 
   destroy() {
+    Territory.live -= 1
     this.destroyed = true
     this.input.detach()
     window.removeEventListener('resize', this.onResize)
@@ -193,6 +200,13 @@ export class Territory {
       this.dismissCover()
       return
     }
+    // The exit: a touch during the dissolution cancels it; after it nothing moves the world.
+    const stage = this.exit.current
+    if (stage !== 'idle') {
+      this.exit.touch(now)
+      this.wake()
+      if (stage !== 'dwelling') return
+    }
     this.glide = null
     this.pendingSettle = null
     this.sound.unlock()
@@ -209,6 +223,9 @@ export class Territory {
   private onMove(s: DragSample, prev: DragSample) {
     if (territoryStore.get().phase === 'cover') return
     if (this.lookback) return
+    const stage = this.exit.current
+    if (stage !== 'idle' && stage !== 'dwelling') return
+    if (stage === 'dwelling') this.exit.touch(s.t)
     this.holdMoved += Math.hypot(s.x - prev.x, s.y - prev.y)
     if (this.holdMoved > config.HOLD_TOLERANCE_PX) this.holdStart = null
     const dt = Math.max(1, s.t - prev.t)
@@ -275,13 +292,14 @@ export class Territory {
     const el = this.els.stage.querySelector<HTMLElement>(`.place[data-n="${n}"]`)
     const seal = el?.querySelector<HTMLElement>('.place__seal')
     const text = el?.querySelector<HTMLElement>('[data-canon="fragment"]')
-    if (!el || !text || (!seal && this.settleTries < 12)) {
+    const exitTally = n === 22 ? this.els.stage.querySelector<HTMLElement>('.exit-tally') : null
+    if (!el || !text || (!seal && this.settleTries < 12) || (n === 22 && !exitTally && this.settleTries < 12)) {
       this.settleTries++
       return
     }
     this.pendingSettle = null
     const stage = this.els.stage.getBoundingClientRect()
-    const rects = [text.getBoundingClientRect(), ...(seal ? [seal.getBoundingClientRect()] : [])]
+    const rects = [text.getBoundingClientRect(), ...(seal ? [seal.getBoundingClientRect()] : []), ...(exitTally ? [exitTally.getBoundingClientRect()] : [])]
     const left = Math.min(...rects.map((r) => r.left)) - stage.left
     const right = Math.max(...rects.map((r) => r.right)) - stage.left
     const top = Math.min(...rects.map((r) => r.top)) - stage.top
@@ -305,7 +323,18 @@ export class Territory {
     const reduced = session.get().reducedMotion
     const from = { x: this.camera.x, y: this.camera.y }
     const to = { x: this.camera.x + dx, y: this.camera.y + dy }
-    this.glide = { from, to, start: now, duration: reduced ? 0 : config.SETTLE_MS, onDone: () => { this.resting = true } }
+    this.glide = {
+      from,
+      to,
+      start: now,
+      duration: reduced ? 0 : config.SETTLE_MS,
+      onDone: () => {
+        this.resting = true
+        // Fragment 22 is the exit: at rest there, the reading dwell begins.
+        const exitPlace = this.world.places.find((p) => p.n === 22)
+        if (exitPlace && n === exitPlace.n) this.exit.arrive(performance.now(), fragmentWords(exitPlace.fragment))
+      },
+    }
   }
 
   // --- linear path -------------------------------------------------------------
@@ -313,7 +342,12 @@ export class Territory {
   /** Glide the viewpoint to a world point (instant with reduced motion). Waits for a title event to end. */
   glideTo(to: Vec2, onDone?: () => void) {
     const now = performance.now()
-    if (territoryStore.get().phase === 'epigraph') this.openTerritory(now)
+    // The linear path may travel before the territory is open: the cover dissolves and the white opens.
+    const phase = territoryStore.get().phase
+    if (phase !== 'territory') {
+      if (phase === 'cover') this.dismissCover()
+      this.openTerritory(now)
+    }
     this.camera.vx = 0
     this.camera.vy = 0
     this.resting = false
@@ -425,6 +459,14 @@ export class Territory {
     if (this.pendingSettle !== null) {
       this.trySettle(now)
       active = true
+    }
+
+    // The exit: dwell, stillness, dissolution (the territory whitens), the Return.
+    if (this.exit.current !== 'idle') {
+      if (this.exit.tick(now, this.input.down, session.get().keyboardUser)) active = true
+      if (this.exit.current === 'dwelling' || this.exit.current === 'dissolving') this.open = 1 - this.exit.whiteness
+      else this.open = 0
+      if (this.exit.current === 'dwelling') active = true
     }
 
     // Glide (linear path or settle), stillness at a place, or physics.
@@ -610,6 +652,17 @@ export class Territory {
   private viewRect(): Rect {
     const margin = this.camera.viewH * 0.5
     return { x: this.camera.left, y: this.camera.top - margin, w: this.camera.viewW, h: this.camera.viewH + 2 * margin }
+  }
+
+  /** The linear path at the exit: step the Return without stillness. */
+  advanceReturn() {
+    const now = performance.now()
+    if (this.exit.current === 'idle') {
+      const exitPlace = this.world.places.find((p) => p.n === 22)
+      if (exitPlace) this.exit.arrive(now, fragmentWords(exitPlace.fragment))
+    }
+    this.exit.advance(now)
+    this.wake()
   }
 
   /** Dev/test: strength of the invoked help (0..1). */

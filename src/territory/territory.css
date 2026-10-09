@@ -194,9 +194,16 @@
   bottom: calc(env(safe-area-inset-bottom, 0px) + 12vh);
   left: var(--gutter);
 }
+.region-title[data-movement='cielo'] {
+  right: var(--gutter);
+}
 .region-title[data-movement='cielo'] .movement-title {
   font-weight: var(--cielo-title-weight);
-  letter-spacing: 0.32em;
+  letter-spacing: 0.26em;
+  white-space: normal;
+}
+.region-title[data-movement='cielo'] .movement-title__word {
+  display: block;
 }
 .region-title[data-movement='cielo'] .movement-title > span:nth-child(2) .movement-title__word {
   font-weight: var(--cielo-title-weight-2);
@@ -344,6 +351,73 @@
   letter-spacing: 0.32em;
 }
 
+/* --- the exit's tally, beside fragment 22 ------------------------------------------- */
+
+.exit-tally {
+  position: absolute;
+  /* Below the place's text block and its seal: the block is centred on the place. */
+  transform: translate(-50%, calc(min(30rem, 74vw) * 0.42 + 6.5rem));
+  animation: return-in 1.4s ease-out both;
+}
+
+/* --- the Return ------------------------------------------------------------------- */
+
+.territory[data-exit='seal'],
+.territory[data-exit='colofon'] {
+  background: var(--paper-near);
+}
+.return {
+  position: absolute;
+  inset: 0;
+  margin: 0 auto;
+  max-width: var(--stage-max-w);
+  animation: return-in 1.4s ease-out both;
+}
+@keyframes return-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.return--reprise {
+  padding: calc(env(safe-area-inset-top, 0px) + 26vh) var(--gutter) 0;
+  pointer-events: none;
+}
+.reprise-line {
+  font-style: italic;
+}
+.return--seal {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.return--colofon {
+  overflow-y: auto;
+  touch-action: pan-y pinch-zoom;
+  padding: calc(env(safe-area-inset-top, 0px) + 10vh) var(--gutter) calc(env(safe-area-inset-bottom, 0px) + 3rem);
+}
+.colofon {
+  max-width: var(--text-max-w);
+}
+.colofon p {
+  margin: 0 0 1.2em;
+}
+.colofon__heading {
+  font-family: var(--font-title);
+  font-weight: 300;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+}
+.territory[data-exit='dissolving'] .world-text,
+.territory[data-exit='reprise'] .world-text,
+.territory[data-exit='seal'] .world-text,
+.territory[data-exit='colofon'] .world-text {
+  pointer-events: none;
+}
+
 /* --- motion ---------------------------------------------------------------------- */
 
 @media (prefers-reduced-motion: reduce) {
@@ -364,6 +438,9 @@
   .cover__stamp,
   .cover__bloom {
     animation-duration: 1ms;
+  }
+  .return {
+    animation-duration: 200ms;
   }
   .place {
     transition-delay: 0ms;

@@ -8,6 +8,7 @@ import { canon } from '../src/content/canon'
 import { Cover } from '../src/territory/Cover'
 import { PlaceText } from '../src/territory/PlaceText'
 import { RegionTitle } from '../src/territory/RegionTitle'
+import { Return } from '../src/territory/Return'
 import { Tally } from '../src/territory/Tally'
 import { ThresholdMark } from '../src/territory/ThresholdMark'
 import { placePlaces } from '../src/world/geography'
@@ -67,6 +68,24 @@ describe('territory renders the canon character-exact', () => {
     const img = container.querySelector('img.cover__signature')
     expect(img?.getAttribute('alt')).toBe(canon.author)
     expect(container.textContent).toBe(canon.title)
+  })
+
+  it('the Return: the reprise verbatim in italics, the lone seal with no numeral, then the Colofón', () => {
+    const reprise = render(<Return stage="reprise" onSeal={() => {}} />)
+    const lines = Array.from(reprise.container.querySelectorAll('[data-canon="reprise"] [data-canon-line]')).map((el) => el.textContent ?? '')
+    expect(lines).toEqual(canon.reprise)
+    expect(reprise.container.querySelector('.reprise-line')).not.toBeNull()
+    reprise.unmount()
+    const seal = render(<Return stage="seal" onSeal={() => {}} />)
+    expect(seal.container.querySelector('button')?.getAttribute('aria-label')).toBe('Colofón')
+    expect(seal.container.querySelector('[data-seal]')).toBeNull()
+    expect(seal.container.textContent).toBe('')
+    seal.unmount()
+    const colofon = render(<Return stage="colofon" onSeal={() => {}} />)
+    expect(colofon.container.querySelector('a[href^="https://www.linkedin.com/"]')).not.toBeNull()
+    expect(colofon.container.querySelector('[data-cycle]')?.getAttribute('data-cycle')).toBe('1')
+    colofon.unmount()
+    expect(render(<Return stage="idle" onSeal={() => {}} />).container.textContent).toBe('')
   })
 
   it('a blind seal never carries a numeral', () => {

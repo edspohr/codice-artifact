@@ -99,7 +99,7 @@ export class Exit {
     switch (this.stage) {
       case 'dwelling': {
         if (this.restoring) {
-          const t = Math.min(1, (now - this.restoreStart) / Math.max(1, config.SNAPBACK_MS))
+          const t = Math.min(1, (now - this.restoreStart) / Math.max(1, config.RESTORE_MS))
           this.progress = this.restoreFrom * (1 - t)
           if (t >= 1) this.restoring = false
           return true

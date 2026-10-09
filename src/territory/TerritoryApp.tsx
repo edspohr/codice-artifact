@@ -11,7 +11,9 @@ import { cssColor, loadAssets } from './assets'
 import { Controls } from './Controls'
 import { PlaceText } from './PlaceText'
 import { Cover } from './Cover'
+import { ExitTally } from './ExitTally'
 import { RegionTitle } from './RegionTitle'
+import { Return } from './Return'
 import { ThresholdMark } from './ThresholdMark'
 import './territory.css'
 
@@ -110,12 +112,13 @@ export default function TerritoryApp({
       data-region={snap.region}
       data-ready={ready ? '' : undefined}
       data-failed={failed ? '' : undefined}
+      data-exit={snap.exit.stage !== 'idle' ? snap.exit.stage : undefined}
     >
       <Controls
         onBack={() => handlesRef.current?.path.back()}
         onNext={() => handlesRef.current?.path.next()}
-        canBack={ready && snap.linearIndex > 0}
-        canNext={ready && snap.linearIndex < stops - 1}
+        canBack={ready && snap.linearIndex > 0 && (snap.exit.stage === 'idle' || snap.exit.stage === 'dwelling')}
+        canNext={ready && snap.linearIndex < stops - 1 && snap.exit.stage !== 'colofon'}
       />
       <canvas ref={canvasRef} className="ink" aria-hidden="true" />
       {snap.title ? <RegionTitle key={snap.title.region} region={snap.title.region} /> : null}
@@ -128,11 +131,15 @@ export default function TerritoryApp({
             })
           : null}
         {world ? world.thresholds.map((th) => <ThresholdMark key={th.from} threshold={th} found={found} />) : null}
+        {world && snap.places[22]?.state !== undefined && snap.places[22]?.state !== 'hidden' && world.places.find((p) => p.n === 22) ? (
+          <ExitTally world={world} exit={world.places.find((p) => p.n === 22)!} found={found} />
+        ) : null}
       </div>
       <div className="epigraph-veil" data-canon="epigraph" data-visible={snap.phase === 'epigraph' ? '' : undefined} aria-hidden={snap.phase !== 'epigraph'}>
         <CanonLines lines={canon.epigraph} />
       </div>
       {snap.phase === 'cover' || !coverGone ? <Cover dismissed={snap.phase !== 'cover'} /> : null}
+      <Return stage={snap.exit.stage} onSeal={() => handlesRef.current?.territory.exit.openColofon()} />
     </main>
   )
 }

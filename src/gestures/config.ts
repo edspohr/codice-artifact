@@ -171,6 +171,8 @@ export const defaultConfig = {
   /** Continuous stillness after the dwell that begins the dissolution (ms), and its length (ms). */
   CIELO_STILL_MS: 4000,
   CIELO_FADE_MS: 5000,
+  /** A touch during the dissolution restores the place over this time (ms). */
+  RESTORE_MS: 600,
   /** The Return: reprise shown for this long before the lone seal (ms). */
   REPRISE_MS: 7000,
 

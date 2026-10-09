@@ -3,6 +3,7 @@
 // the accessible controls from this snapshot.
 import { useSyncExternalStore } from 'react'
 import type { MovementId } from '../content/canon'
+import type { ExitSnapshot } from './exit'
 import type { PlaceStatus } from './places'
 import type { World } from './types'
 
@@ -19,6 +20,8 @@ export interface TerritorySnapshot {
   revealAll: boolean
   /** Linear path position, for the controls. */
   linearIndex: number
+  /** The exit and the Return. */
+  exit: ExitSnapshot
 }
 
 let snapshot: TerritorySnapshot = {
@@ -29,6 +32,7 @@ let snapshot: TerritorySnapshot = {
   region: 'mar',
   revealAll: false,
   linearIndex: 0,
+  exit: { stage: 'idle', progress: 0 },
 }
 
 const listeners = new Set<() => void>()
@@ -58,7 +62,7 @@ export const territoryStore = {
     }
   },
   reset() {
-    snapshot = { phase: 'cover', world: null, places: {}, title: null, region: 'mar', revealAll: false, linearIndex: 0 }
+    snapshot = { phase: 'cover', world: null, places: {}, title: null, region: 'mar', revealAll: false, linearIndex: 0, exit: { stage: 'idle', progress: 0 } }
     emit()
   },
 }

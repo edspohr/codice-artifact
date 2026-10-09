@@ -5,7 +5,12 @@ import { session } from '../app/session'
 import type { Territory } from './loop'
 import { territoryStore } from './territoryStore'
 
-export type Stop = { kind: 'cover' } | { kind: 'epigraph' } | { kind: 'place'; n: number } | { kind: 'threshold'; index: number }
+export type Stop =
+  | { kind: 'cover' }
+  | { kind: 'epigraph' }
+  | { kind: 'place'; n: number }
+  | { kind: 'threshold'; index: number }
+  | { kind: 'return'; stage: 'dissolution' | 'reprise' | 'seal' | 'colofon' }
 
 /** Cover, epigraph, then every place in canonical order with each region's threshold after its last place. */
 export function stopsFor(t: Territory): Stop[] {
@@ -16,6 +21,8 @@ export function stopsFor(t: Territory): Stop[] {
     const th = t.world.thresholds.findIndex((x) => x.fragments[x.fragments.length - 1] === p.n)
     if (th >= 0) stops.push({ kind: 'threshold', index: th })
   }
+  // After the exit: the Return, step by step. There is no way back past the dissolution.
+  stops.push({ kind: 'return', stage: 'dissolution' }, { kind: 'return', stage: 'reprise' }, { kind: 'return', stage: 'seal' }, { kind: 'return', stage: 'colofon' })
   return stops
 }
 
@@ -35,7 +42,10 @@ export class LinearPath {
 
   private go(index: number) {
     const stops = this.stops
-    const clamped = Math.max(0, Math.min(stops.length - 1, index))
+    // The dissolution is the point of no return.
+    const exitStage = this.territory.exit.current
+    const floorIndex = exitStage === 'idle' || exitStage === 'dwelling' ? 0 : stops.findIndex((s) => s.kind === 'return')
+    const clamped = Math.max(floorIndex, Math.min(stops.length - 1, index))
     if (this.pending !== null) {
       this.territory.arriveAt(this.pending)
       this.pending = null
@@ -67,6 +77,9 @@ export class LinearPath {
         }
         break
       }
+      case 'return':
+        t.advanceReturn()
+        break
       case 'threshold': {
         // Frame the closing from inside the region being left: the band's centre is the boundary.
         const th = t.world.thresholds[stop.index]

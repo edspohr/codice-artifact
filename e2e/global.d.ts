@@ -4,6 +4,7 @@ declare global {
   interface Window {
     __codice?: {
       config: Record<string, number>
+      session: { patch(p: { keyboardUser?: boolean }): void }
       territory: {
         territory: {
           camera: { x: number; y: number; clamp(): void }
