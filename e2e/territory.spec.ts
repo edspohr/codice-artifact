@@ -16,7 +16,7 @@ const canon: Canon = JSON.parse(
   readFileSync(resolve(fileURLToPath(new URL('.', import.meta.url)), '../src/content/codice.canon.json'), 'utf8'),
 )
 
-const BASE = '/?proto=territory&cfg.SOUND_ENABLED=0'
+const BASE = '/?cfg.SOUND_ENABLED=0'
 
 async function ready(page: Page) {
   await expect(page.locator('.territory[data-ready]')).toHaveCount(1, { timeout: 15_000 })
@@ -164,7 +164,7 @@ test.describe('territory: entry and the linear path', () => {
       const bands = await page.evaluate(
         ([f, w, h]) => {
           const t = window.__codice!.territory!.territory
-          const region = t.world.regions[0]!.rect
+          const region = t.world.regions.find((r) => r.id === 'mar')!.rect
           t.camera.x = region.x + region.w / 2
           t.camera.y = region.y + region.h * f
           t.camera.clamp()
@@ -220,14 +220,15 @@ test.describe('territory: entry and the linear path', () => {
     await expect(tally.locator('.tally__impression')).toHaveCount(4)
     await expect(tally.locator('[data-inked]')).toHaveCount(4)
     expect(await tally.locator('[data-seal]').allTextContents()).toEqual(['I', 'II', 'III', 'IV'])
-    // Beyond: the stub with Tierra's title only.
+    // Beyond: Tierra, with its title event after the look back.
     await page.keyboard.press('ArrowRight')
-    await page.waitForTimeout(1200)
-    expect(await page.locator('.territory').getAttribute('data-region')).toBe('stub')
+    await expect.poll(() => page.locator('.territory').getAttribute('data-region'), { timeout: 10_000 }).toBe('tierra')
     await expect(page.locator('.region-title[data-movement="tierra"] [data-canon="movement-title"]')).toHaveText(
       canon.movements[1]!.title,
+      { timeout: 10_000 },
     )
     // Volver goes back down (after Tierra's title event has dissolved).
+    await page.keyboard.press('ArrowLeft')
     await page.keyboard.press('ArrowLeft')
     await expect.poll(() => page.locator('.territory').getAttribute('data-region'), { timeout: 10_000 }).toBe('mar')
     await expectNoPageScroll(page)
@@ -394,7 +395,7 @@ test.describe('territory: touch', () => {
     const dark = await page.evaluate(
       ([w]) => {
         const t = window.__codice!.territory!.territory
-        const th = (t.world as unknown as { thresholds: Array<{ band: { x: number; y: number; w: number; h: number } }> }).thresholds[0]!
+        const th = t.world.thresholds[0]!
         t.camera.x = th.band.x + th.band.w / 2
         t.camera.y = th.band.y + th.band.h / 2 + 250
         t.glideTo({ x: t.camera.x, y: t.camera.y })
@@ -413,7 +414,7 @@ test.describe('territory: touch', () => {
     await expect.poll(() => page.evaluate(() => window.__codice!.territory!.territory.currentZoom()), { timeout: 3000 }).toBeLessThan(0.6)
     await expect.poll(() => page.evaluate(() => window.__codice!.territory!.territory.isLookingBack()), { timeout: 5000 }).toBe(false)
     expect(await page.evaluate(() => window.__codice!.territory!.territory.currentZoom())).toBe(1)
-    expect(await page.locator('.territory').getAttribute('data-region')).toBe('stub')
+    expect(await page.locator('.territory').getAttribute('data-region')).toBe('tierra')
   })
 
   test('edge touches are ignored', async ({ page, viewport }) => {

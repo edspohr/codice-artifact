@@ -8,13 +8,12 @@ import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { canon } from '../src/content/canon'
 import { copy } from '../src/content/copy.es'
-import { journey } from '../src/content/journey'
+import { Colofon } from '../src/territory/Colofon'
 import { Cover } from '../src/territory/Cover'
 import { PlaceText } from '../src/territory/PlaceText'
 import { RegionTitle } from '../src/territory/RegionTitle'
 import { Tally } from '../src/territory/Tally'
 import { ThresholdMark } from '../src/territory/ThresholdMark'
-import { StationView } from '../src/views/StationView'
 import { placePlaces } from '../src/world/geography'
 
 const root = resolve(__dirname, '..')
@@ -109,14 +108,13 @@ describe('appendix terms never surface', () => {
   })
 
   it('are absent from copy, metadata, title and every non-canon DOM surface', () => {
-    const surfaces: Array<[string, string]> = [...flatten(copy)]
+    // Copy values that are canon (the LinkedIn URL is author data, not copy to check for terms).
+    const surfaces: Array<[string, string]> = flatten(copy).filter(([k]) => !k.endsWith('linkedinUrl'))
     const html = readFileSync(resolve(root, 'index.html'), 'utf8')
     surfaces.push(['index.html', html])
-    for (const station of journey) {
-      const { container, unmount } = render(<StationView station={station} role="current" focusOnEnter={false} />)
-      surfaces.push(...surfacesOf(container, station.id))
-      unmount()
-    }
+    const colofon = render(<Colofon />)
+    surfaces.push(...surfacesOf(colofon.container, 'colofon'))
+    colofon.unmount()
     // Territory surfaces: every place (stamped), every region title, a tally.
     const rect = { x: 0, y: 0, w: 546, h: 3376 }
     for (const m of canon.movements) {
@@ -132,10 +130,10 @@ describe('appendix terms never surface', () => {
       surfaces.push(...surfacesOf(title.container, `title:${m.id}`))
       title.unmount()
     }
-    const tally = render(<Tally threshold={{ from: 'mar', band: rect, fragments: [1, 2, 3, 4] }} found={new Set([1, 3])} />)
+    const tally = render(<Tally threshold={{ from: 'mar', to: 'tierra', band: rect, fragments: [1, 2, 3, 4] }} found={new Set([1, 3])} />)
     surfaces.push(...surfacesOf(tally.container, 'tally'))
     tally.unmount()
-    const mark = render(<ThresholdMark threshold={{ from: 'mar', band: rect, fragments: [1, 2, 3, 4] }} found={new Set([2])} />)
+    const mark = render(<ThresholdMark threshold={{ from: 'mar', to: 'tierra', band: rect, fragments: [1, 2, 3, 4] }} found={new Set([2])} />)
     surfaces.push(...surfacesOf(mark.container, 'threshold-mark'))
     mark.unmount()
     const cover = render(<Cover dismissed={false} />)

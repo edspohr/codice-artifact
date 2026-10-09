@@ -5,7 +5,8 @@
 // place (subtle help, zero disables).
 import { config } from '../gestures/config'
 import type { Camera } from './camera'
-import type { Vec2, World } from './types'
+import type { Rect, Vec2, World } from './types'
+import { regionAt } from './world'
 
 export interface Slip {
   /** Finger position in world px at the start and end of the step. */
@@ -95,9 +96,13 @@ export class MarPhysics {
    * Measured over the camera's reachable lateral play, so a narrow channel
    * still has banks.
    */
+  /** The rect of the region the viewpoint is in. */
+  private regionRect(): Rect {
+    return regionAt(this.world, this.camera.y).rect
+  }
+
   bankFactor(x: number): number {
-    const region = this.world.regions[0]?.rect
-    if (!region) return 0
+    const region = this.regionRect()
     const halfRange = Math.max(1, region.w / 2 - this.camera.viewW / 2)
     const u = Math.abs(x - (region.x + region.w / 2)) / halfRange
     const start = Math.min(0.99, Math.max(0, config.BANK_START))
@@ -137,10 +142,8 @@ export class MarPhysics {
     return speed
   }
 
-  /** Current velocity (px/ms) at a world position. Mar's current exists only inside Mar. */
+  /** Current velocity (px/ms) at a world position. */
   currentAt(x: number, y: number, now: number, nearestUnfound: Vec2 | null): Vec2 {
-    const mar = this.world.regions[0]?.rect
-    if (mar && y < mar.y) return { x: 0, y: 0 }
     const speed = this.currentSpeed(now)
     const dir = this.currentDirection(x, y, nearestUnfound)
     let vx = dir.x * speed
@@ -153,9 +156,9 @@ export class MarPhysics {
       }
     }
     // Banks: a return current toward the centre line, so nobody drifts into nothing.
-    const region = this.world.regions[0]?.rect
+    const region = regionAt(this.world, y).rect
     const bank = this.bankFactor(x)
-    if (region && bank > 0) {
+    if (bank > 0) {
       const toCentre = Math.sign(region.x + region.w / 2 - x)
       vx += (toCentre * config.BANK_RETURN * bank) / 1000
     }

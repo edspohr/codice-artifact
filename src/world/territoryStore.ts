@@ -14,8 +14,8 @@ export interface TerritorySnapshot {
   places: Record<number, PlaceStatus>
   /** The title event, if one is on screen: it appears alone on entering a region and dissolves. */
   title: { region: MovementId; startedAt: number } | null
-  /** Which region the viewpoint is in ('stub' above Mar's threshold). */
-  region: MovementId | 'stub'
+  /** Which region the viewpoint is in. */
+  region: MovementId
   revealAll: boolean
   /** Linear path position, for the controls. */
   linearIndex: number

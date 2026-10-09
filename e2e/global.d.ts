@@ -11,6 +11,7 @@ declare global {
             short: number
             places: Array<{ n: number; x: number; y: number }>
             regions: Array<{ id: string; rect: { x: number; y: number; w: number; h: number } }>
+            thresholds: Array<{ from: string; to: string; band: { x: number; y: number; w: number; h: number } }>
           }
           isResting(): boolean
           helpStrength(): number

@@ -1,9 +1,9 @@
 import { CURRENT_CYCLE } from '../app/cycle'
 import { copy } from '../content/copy.es'
 
-// Phase 1 stub. Contribution link and email sign-up arrive in Phase 6.
+// Reached only through the lone seal. Contribution link and email sign-up arrive in Phase 7.
 // All text here is author copy (or its TODO-AUTHOR placeholder).
-export function ColofonView() {
+export function Colofon() {
   const c = copy.colofon
   return (
     <div className="colofon">

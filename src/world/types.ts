@@ -32,16 +32,17 @@ export interface Place {
 }
 
 export interface Threshold {
-  /** Region being left. */
+  /** Region being left (below) and entered (above). */
   from: MovementId
-  /** Band in world px. */
+  to: MovementId
+  /** Band in world px, centred on the boundary. */
   band: Rect
   /** Fragments tallied at this threshold. */
   fragments: number[]
 }
 
 export interface World {
-  /** Whole world in px, including the stub above Mar. */
+  /** Whole world in px: the four channels stacked, Mar at the bottom, Cielo at the top. */
   width: number
   height: number
   regions: Region[]

@@ -88,7 +88,7 @@ describe('Mar physics: traction', () => {
   it('banks: lateral traction fades toward the edge and a return current points to the centre', () => {
     setConfig('MAR_LAG_MS', 0)
     const { world, camera, physics } = setup()
-    const region = world.regions[0]!.rect
+    const region = world.regions.find((r) => r.id === 'mar')!.rect
     const centre = region.x + region.w / 2
     const halfRange = region.w / 2 - camera.viewW / 2
     camera.x = centre
@@ -160,7 +160,7 @@ describe('Mar physics: traction', () => {
     setConfig('MAR_CURRENT_FADE_S', 0)
     const { world, camera, physics } = setup()
     const band = world.thresholds[0]!.band
-    const mar = world.regions[0]!.rect
+    const mar = world.regions.find((r) => r.id === 'mar')!.rect
     const centreX = mar.x + mar.w / 2
     physics.helpBias = 0
     const inside = physics.currentAt(centreX, band.y + band.h * 0.75, 0, null)

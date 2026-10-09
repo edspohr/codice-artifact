@@ -1,3 +1,4 @@
+import type { MovementId } from '../content/canon'
 import type { World } from '../world/types'
 
 // Phase 2: placeholder terrain rendered at build time (see scripts/).
@@ -22,14 +23,17 @@ export function loadImage(src: string): Promise<HTMLImageElement> {
 }
 
 export async function loadAssets(world: World) {
-  const ground = await loadImage(groundSrc(world.regions[0]?.id ?? 'mar'))
+  const grounds = new Map<MovementId, HTMLImageElement>()
   const formations = new Map<number, HTMLImageElement>()
-  await Promise.all(
-    world.places.map(async (p) => {
+  await Promise.all([
+    ...world.regions.map(async (r) => {
+      grounds.set(r.id, await loadImage(groundSrc(r.id)))
+    }),
+    ...world.places.map(async (p) => {
       formations.set(p.n, await loadImage(formationSrc(p.n)))
     }),
-  )
-  return { ground, formations }
+  ])
+  return { grounds, formations }
 }
 
 export function cssColor(name: string): [number, number, number] {

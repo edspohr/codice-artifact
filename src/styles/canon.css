@@ -1,0 +1,17 @@
+/* Canon text: one block per canon line, never transformed, never hyphenated. */
+
+
+.canon-line {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: var(--body-size);
+  line-height: var(--body-lh);
+  letter-spacing: 0;
+  text-align: left;
+  text-transform: none;
+  hyphens: manual;
+  -webkit-hyphens: manual;
+  overflow-wrap: break-word;
+  max-width: var(--text-max-w);
+}
+

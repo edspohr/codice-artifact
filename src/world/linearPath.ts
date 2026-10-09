@@ -5,14 +5,17 @@ import { session } from '../app/session'
 import type { Territory } from './loop'
 import { territoryStore } from './territoryStore'
 
-export type Stop = { kind: 'cover' } | { kind: 'epigraph' } | { kind: 'place'; n: number } | { kind: 'threshold'; from: 'mar' } | { kind: 'stub' }
+export type Stop = { kind: 'cover' } | { kind: 'epigraph' } | { kind: 'place'; n: number } | { kind: 'threshold'; index: number }
 
+/** Cover, epigraph, then every place in canonical order with each region's threshold after its last place. */
 export function stopsFor(t: Territory): Stop[] {
   const stops: Stop[] = [{ kind: 'cover' }, { kind: 'epigraph' }]
   const ordered = [...t.world.places].sort((a, b) => a.n - b.n)
-  for (const p of ordered) stops.push({ kind: 'place', n: p.n })
-  stops.push({ kind: 'threshold', from: 'mar' })
-  stops.push({ kind: 'stub' })
+  for (const p of ordered) {
+    stops.push({ kind: 'place', n: p.n })
+    const th = t.world.thresholds.findIndex((x) => x.fragments[x.fragments.length - 1] === p.n)
+    if (th >= 0) stops.push({ kind: 'threshold', index: th })
+  }
   return stops
 }
 
@@ -65,14 +68,9 @@ export class LinearPath {
         break
       }
       case 'threshold': {
-        // Frame the tally from inside Mar: the band's centre is the region boundary.
-        const th = t.world.thresholds[0]
+        // Frame the closing from inside the region being left: the band's centre is the boundary.
+        const th = t.world.thresholds[stop.index]
         if (th) t.glideTo({ x: th.band.x + th.band.w / 2, y: th.band.y + th.band.h / 2 + t.camera.viewH * 0.22 }, () => t.rest())
-        break
-      }
-      case 'stub': {
-        const th = t.world.thresholds[0]
-        if (th) t.glideTo({ x: th.band.x + th.band.w / 2, y: th.band.y - t.camera.viewH * 0.6 }, () => t.rest())
         break
       }
     }

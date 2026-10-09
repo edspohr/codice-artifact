@@ -195,7 +195,8 @@ uniform float uNoiseScale; // world px per noise tile
 uniform vec4 uHelp;        // target x, y, bias, active
 uniform vec3 uGrain;       // strength, wiggle, wavelength (px)
 uniform float uShort;
-uniform vec4 uBand;        // threshold band: y, height, mass, enabled
+uniform vec4 uBandA;       // threshold band below: y, height, mass, enabled
+uniform vec4 uBandB;       // threshold band above: y, height, mass, enabled
 
 float formation(sampler2D img, vec4 place, vec2 p) {
   if (place.w <= 0.001) return 0.0;
@@ -215,13 +216,16 @@ void main() {
   float g = texture2D(uGround, uv).r;
   float ins = texture2D(uVI, uv).b;
 
-  // The threshold as a colossus: a mass of ink at full expression across the band.
-  if (uBand.w > 0.5) {
-    float edge = uBand.y * 0.35;
-    float inBand = smoothstep(uBand.x - edge, uBand.x + edge, p.y) * (1.0 - smoothstep(uBand.x + uBand.y - edge, uBand.x + uBand.y + edge, p.y));
-    float mass = uBand.z * (0.7 + 0.3 * n.r) * inBand;
-    d = max(d, mass);
-    g = max(g, mass);
+  // The thresholds as colossi: a mass of ink at full expression across each band.
+  for (int b = 0; b < 2; b++) {
+    vec4 band = b == 0 ? uBandA : uBandB;
+    if (band.w > 0.5) {
+      float edge = band.y * 0.35;
+      float inBand = smoothstep(band.x - edge, band.x + edge, p.y) * (1.0 - smoothstep(band.x + band.y - edge, band.x + band.y + edge, p.y));
+      float mass = band.z * (0.78 + 0.22 * n.r) * inBand;
+      d = max(d, mass);
+      g = max(g, mass);
+    }
   }
 
   // The grain of the ink runs up the channel and bends, faintly, toward the
@@ -269,10 +273,9 @@ void main() {
   vec3 color = mix(uPaper, uInk, d);
   color = mix(color, uAccentColor, accent * (0.35 + 0.65 * d));
   color = mix(uPaper, color, uOpen);
-  // Beyond the field (only visible while looking back): paper, with a soft edge.
+  // Beyond the field (only visible while looking back): paper, with a soft edge on the sides.
   float edgeW = 40.0 / uWorld.z;
-  float inside = smoothstep(-edgeW, 0.0, uv.x) * (1.0 - smoothstep(1.0, 1.0 + edgeW, uv.x))
-               * smoothstep(-edgeW, 0.0, uv.y) * (1.0 - smoothstep(1.0, 1.0 + edgeW, uv.y));
+  float inside = smoothstep(-edgeW, 0.0, uv.x) * (1.0 - smoothstep(1.0, 1.0 + edgeW, uv.x));
   color = mix(uPaper, color, inside);
   gl_FragColor = vec4(color, 1.0);
 }

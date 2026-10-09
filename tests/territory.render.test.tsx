@@ -42,7 +42,7 @@ describe('territory renders the canon character-exact', () => {
   })
 
   it('the tally inks found fragments with their numeral and leaves the rest blind', () => {
-    const threshold = { from: 'mar' as const, band: { x: 0, y: 0, w: 1170, h: 500 }, fragments: [1, 2, 3, 4] }
+    const threshold = { from: 'mar' as const, to: 'tierra' as const, band: { x: 0, y: 0, w: 1170, h: 500 }, fragments: [1, 2, 3, 4] }
     const { container } = render(<Tally threshold={threshold} found={new Set([2, 4])} />)
     const impressions = container.querySelectorAll('.tally__impression')
     expect(impressions).toHaveLength(4)
@@ -53,7 +53,7 @@ describe('territory renders the canon character-exact', () => {
   })
 
   it('the closing of a region shows its title verbatim with the tally beneath', () => {
-    const threshold = { from: 'mar' as const, band: { x: 0, y: 0, w: 546, h: 500 }, fragments: [1, 2, 3, 4] }
+    const threshold = { from: 'mar' as const, to: 'tierra' as const, band: { x: 0, y: 0, w: 546, h: 500 }, fragments: [1, 2, 3, 4] }
     const { container } = render(<ThresholdMark threshold={threshold} found={new Set([1, 4])} />)
     expect(container.querySelector('[data-canon="movement-title"]')?.textContent).toBe(canon.movements[0]!.title)
     expect(container.querySelectorAll('.tally__impression')).toHaveLength(4)

@@ -11,7 +11,8 @@ import { Sound } from './sound'
 import { territoryStore } from './territoryStore'
 import { PointerInput, type DragSample } from './input'
 import type { MovementId } from '../content/canon'
-import type { Place, Vec2, World } from './types'
+import type { Place, Rect, Vec2, World } from './types'
+import { regionAt } from './world'
 
 export interface TerritoryElements {
   stage: HTMLElement
@@ -80,7 +81,7 @@ export class Territory {
   // The cost of finding.
   private dirt = 0
   // The look back: a brief pull-back when a threshold is first crossed upward.
-  private lookback: { start: number; k: number } | null = null
+  private lookback: { start: number; k: number; threshold: number } | null = null
   private lookedBack = new Set<string>()
   private zoom = 1
   private pendingTitle: MovementId | null = null
@@ -159,7 +160,7 @@ export class Territory {
     this.opening = true
     this.openStart = now
     territoryStore.patch({ phase: 'territory' })
-    this.showTitle('mar', now)
+    this.showTitle(regionAt(this.world, this.camera.y).id, now)
   }
 
   /** The title is an event: it appears alone on entering a region and dissolves before any place can emerge. */
@@ -239,10 +240,9 @@ export class Territory {
     this.wake()
   }
 
+  /** 0 at the bottom of the territory, 1 at the top (the sound's register). */
   private height(): number {
-    const mar = this.world.regions[0]?.rect
-    if (!mar) return 0
-    return 1 - Math.max(0, Math.min(1, (this.camera.y - mar.y) / mar.h))
+    return 1 - Math.max(0, Math.min(1, this.camera.y / this.world.height))
   }
 
   // --- places ------------------------------------------------------------------
@@ -461,23 +461,22 @@ export class Territory {
     if (this.help !== prevHelp || this.holdStart !== null) active = true
     this.physics.helpBias = config.MAR_HELP_BIAS + (config.MAR_HELP_ACTIVE_BIAS - config.MAR_HELP_BIAS) * this.help
 
-    // Region (stub above the threshold). Entering a region is a title event; crossing a
-    // threshold upward for the first time is a look back down the channel.
-    const mar = this.world.regions[0]?.rect
-    const region = mar && this.camera.y < mar.y ? 'stub' : 'mar'
-    if (territoryStore.get().region !== region) {
+    // Entering a region is a title event; crossing a threshold upward for the first
+    // time is a look back down the channel just crossed.
+    const region = regionAt(this.world, this.camera.y).id
+    const previous = territoryStore.get().region
+    if (previous !== region) {
       territoryStore.patch({ region })
-      if (region === 'stub') {
-        if (!this.lookedBack.has('mar') && config.LOOKBACK_ZOOM > 0 && config.LOOKBACK_MS > 0 && !session.get().reducedMotion) {
-          this.lookedBack.add('mar')
-          this.lookback = { start: now, k: 0 }
-          this.camera.vx = 0
-          this.camera.vy = 0
-          // The next region's title waits for the look back to end.
-          this.pendingTitle = 'tierra'
-        } else {
-          this.showTitle('tierra', now)
-        }
+      const crossed = this.world.thresholds.findIndex((t) => t.from === previous && t.to === region)
+      if (crossed >= 0 && !this.lookedBack.has(previous) && config.LOOKBACK_ZOOM > 0 && config.LOOKBACK_MS > 0 && !session.get().reducedMotion) {
+        this.lookedBack.add(previous)
+        this.lookback = { start: now, k: 0, threshold: crossed }
+        this.camera.vx = 0
+        this.camera.vy = 0
+        // The new region's title waits for the look back to end.
+        this.pendingTitle = region
+      } else {
+        this.showTitle(region, now)
       }
     }
 
@@ -516,7 +515,7 @@ export class Territory {
     if (brush && this.open <= 0 && !this.opening) {
       // The first mark before the white opens still lands in the field.
     }
-    this.ink.step(dt / 1000, brush, this.dirt)
+    this.ink.step(dt / 1000, brush, this.dirt, this.viewRect())
     if (brush || now - this.lastDragT < 1500) active = true
 
     // Sway from camera velocity (text as matter in Mar).
@@ -540,7 +539,7 @@ export class Territory {
       this.idleTimer = window.setTimeout(() => {
         this.idleTimer = 0
         this.lastFrame = performance.now()
-        this.ink.step(0.25, null)
+        this.ink.step(0.25, null, this.dirt, this.viewRect())
         this.render()
         if (!this.destroyed) this.idleTimer = window.setTimeout(() => this.wake(), 250)
       }, 250)
@@ -558,7 +557,7 @@ export class Territory {
   /** The viewpoint's centre, shifted down the channel while looking back (the band near the top of the view). */
   private viewCentre(): Vec2 {
     const lb = this.lookback
-    const band = this.world.thresholds[0]?.band
+    const band = lb ? this.world.thresholds[lb.threshold]?.band : undefined
     if (!lb || !band || this.zoom >= 1) return { x: this.camera.x, y: this.camera.y }
     const visibleH = this.camera.viewH / this.zoom
     const lookY = band.y - band.h * 0.5 + visibleH * 0.5 - this.camera.viewH * 0.12
@@ -605,6 +604,12 @@ export class Territory {
       this.clears,
       help,
     )
+  }
+
+  /** The camera rect in world px, widened so neighbouring regions keep simulating near a threshold. */
+  private viewRect(): Rect {
+    const margin = this.camera.viewH * 0.5
+    return { x: this.camera.left, y: this.camera.top - margin, w: this.camera.viewW, h: this.camera.viewH + 2 * margin }
   }
 
   /** Dev/test: strength of the invoked help (0..1). */

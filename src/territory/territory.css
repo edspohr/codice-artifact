@@ -176,6 +176,32 @@
 .region-title[data-movement='tierra'] .movement-title > span:nth-child(2) .movement-title__word {
   font-style: italic;
 }
+.region-title[data-movement='cordillera'] {
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 14vh);
+  left: 50%;
+  transform: translate(-50%, 0);
+}
+.region-title[data-movement='cordillera'] .movement-title {
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-align: center;
+  white-space: normal;
+}
+.region-title[data-movement='cordillera'] .movement-title__word {
+  display: block;
+}
+.region-title[data-movement='cielo'] {
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 12vh);
+  left: var(--gutter);
+}
+.region-title[data-movement='cielo'] .movement-title {
+  font-weight: var(--cielo-title-weight);
+  letter-spacing: 0.32em;
+}
+.region-title[data-movement='cielo'] .movement-title > span:nth-child(2) .movement-title__word {
+  font-weight: var(--cielo-title-weight-2);
+  letter-spacing: 0.22em;
+}
 
 /* --- the cover ---------------------------------------------------------------- */
 
@@ -300,6 +326,22 @@
 .threshold-mark[data-movement='mar'] .movement-title {
   font-weight: 300;
   letter-spacing: 0.22em;
+}
+.threshold-mark[data-movement='tierra'] .movement-title {
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  word-spacing: 0.35em;
+}
+.threshold-mark[data-movement='tierra'] .movement-title > span:nth-child(2) .movement-title__word {
+  font-style: italic;
+}
+.threshold-mark[data-movement='cordillera'] .movement-title {
+  font-weight: 600;
+  letter-spacing: 0.14em;
+}
+.threshold-mark[data-movement='cielo'] .movement-title {
+  font-weight: var(--cielo-title-weight);
+  letter-spacing: 0.32em;
 }
 
 /* --- motion ---------------------------------------------------------------------- */

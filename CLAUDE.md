@@ -182,8 +182,8 @@ No accounts. No social sharing. No comments. No rewards: no scores, badges, stre
 
 One phase at a time. Each ends with: what was built, how to verify it, what could not be verified without a real device, open questions, and a commit. Do not start the next without the author's go-ahead.
 
-1. **Static journey — done, partly retired.** Kept: canon loader and seal, integrity and appendix tests, fonts and tokens, the seal component, copy file, dev-tooling pattern, whatever of the gesture engine is reusable. Retired once Phase 2 passes its gate: the 31 stations and the paged views.
-2. **Prototype: Mar as territory.** One region only, built to be judged, not to be final: WebGL ink field with placeholder plates blended as terrain, drag with Mar's physics, ink smear with the accent, four hidden places that emerge, seal stamping, text swaying, the threshold with its tally (leading to a stub), the linear accessible path, sound behind its flag. Lives beside the old journey until the gate. **Gate: the author walks it on a phone and decides to continue, adjust or go back.**
+1. **Static journey — done and retired.** What survived: canon loader and seal, integrity and appendix tests, fonts and tokens, the seal component, copy file, the dev-tooling pattern. The 31 stations, the paged views and the gesture recognizers were removed in Phase 3.
+2. **Prototype: Mar as territory — done, gate passed.** WebGL ink field with placeholder terrain, traction physics, smear with the accent, hidden places, stamping, the closing at the threshold, the linear path, sound behind its flag, the cover, invoked help, the cost of finding, the colossus and the look back.
 3. **The whole territory.** Tierra, Cordillera and Cielo with their physics and text behaviours, thresholds and titles, the exit at 22, the Return sequence, seeded geography, subtle help, full test suite on the linear path; old paged code removed.
 4. **Patina.** Emulators, rules, App Check, batched deltas, desire-path rendering.
 5. **The cycle.** Wear, time erosion, approach signals, Exodus, the Burst in real time, new geography on Return, debug panel.

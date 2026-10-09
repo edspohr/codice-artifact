@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { canon } from '../src/content/canon'
 import { config, resetConfig } from '../src/gestures/config'
 import { placePlaces } from '../src/world/geography'
-import { buildWorld } from '../src/world/world'
+import { buildWorld, regionAt } from '../src/world/world'
 
 beforeEach(() => resetConfig())
 
@@ -57,7 +57,7 @@ describe('geography', () => {
   it('puts the first place within about one screen of the start, out of view and beyond emergence', () => {
     for (const cycle of [1, 2, 3, 7, 42]) {
       const w = buildWorld(VIEW_W, VIEW_H, cycle)
-      const first = w.places[0]!
+      const first = w.places.find((p) => p.n === 1)!
       const d = Math.hypot(first.x - w.start.x, first.y - w.start.y)
       expect(d).toBeLessThanOrEqual(1.15 * VIEW_H)
       expect(d).toBeGreaterThan(config.EMERGE_DISTANCE * w.short)
@@ -67,6 +67,9 @@ describe('geography', () => {
       for (const p of w.places) {
         expect(Math.hypot(p.x - w.start.x, p.y - w.start.y)).toBeGreaterThan(config.EMERGE_DISTANCE * w.short)
       }
+      // The exit sits at the far top of the world.
+      const exit = w.places.find((p) => p.n === 22)!
+      for (const p of w.places) if (p.n !== 22) expect(p.y).toBeGreaterThan(exit.y)
     }
   })
 
@@ -78,15 +81,36 @@ describe('geography', () => {
     for (const p of places) if (p.n !== 22) expect(p.y).toBeGreaterThan(exit.y)
   })
 
-  it('builds Mar as a 1.4×5.5 channel with a stub above and the start at the bottom centre, in dense ink', () => {
+  it('stacks four channels, Mar at the bottom and Cielo at the top, with a threshold between each pair', () => {
     const w = buildWorld(VIEW_W, VIEW_H, 1)
-    const marH = Math.round(VIEW_H * 5.5)
-    expect(w.regions[0]!.rect).toEqual({ x: 0, y: 1266, w: 546, h: marH })
+    expect(w.regions.map((r) => r.id)).toEqual(['mar', 'tierra', 'cordillera', 'cielo'])
+    const heights = [5.5, 5, 5, 4.5].map((s) => Math.round(VIEW_H * s))
+    expect(w.height).toBe(heights.reduce((a, b) => a + b, 0))
     expect(w.width).toBe(546)
-    expect(w.height).toBe(1266 + marH)
-    expect(w.places.map((p) => p.n)).toEqual([1, 2, 3, 4])
-    expect(w.start).toEqual({ x: 273, y: 1266 + marH - 422 })
-    expect(w.thresholds[0]!.fragments).toEqual([1, 2, 3, 4])
+    const mar = w.regions.find((r) => r.id === 'mar')!.rect
+    const cielo = w.regions.find((r) => r.id === 'cielo')!.rect
+    expect(mar.y + mar.h).toBe(w.height)
+    expect(cielo.y).toBe(0)
+    for (let i = 1; i < w.regions.length; i++) {
+      const below = w.regions[i - 1]!.rect
+      const above = w.regions[i]!.rect
+      expect(above.y + above.h).toBe(below.y)
+    }
+    expect(w.places.map((p) => p.n)).toEqual(Array.from({ length: 22 }, (_, i) => i + 1))
+    for (const p of w.places) {
+      const r = w.regions.find((x) => x.id === p.region)!.rect
+      expect(p.y).toBeGreaterThanOrEqual(r.y)
+      expect(p.y).toBeLessThanOrEqual(r.y + r.h)
+    }
+    expect(w.thresholds.map((t) => [t.from, t.to])).toEqual([
+      ['mar', 'tierra'],
+      ['tierra', 'cordillera'],
+      ['cordillera', 'cielo'],
+    ])
+    expect(w.thresholds.map((t) => t.fragments)).toEqual([[1, 2, 3, 4], [5, 6, 7, 8, 9, 10], [11, 12, 13, 14, 15, 16]])
+    expect(w.start).toEqual({ x: 273, y: w.height - 422 })
+    expect(regionAt(w, w.start.y).id).toBe('mar')
+    expect(regionAt(w, 10).id).toBe('cielo')
   })
 
   it('on a wide screen the world is never narrower than the viewport and places still fit the text block', () => {

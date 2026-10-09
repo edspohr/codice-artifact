@@ -6,7 +6,7 @@ const out = process.argv[3] || '.'
 const browser = await chromium.launch()
 const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true })
 const page = await ctx.newPage()
-await page.goto(`${base}/?proto=territory&cfg.SOUND_ENABLED=0`)
+await page.goto(`${base}/?cfg.SOUND_ENABLED=0`)
 await page.waitForSelector('.territory[data-ready]')
 await page.evaluate(() => document.fonts.ready)
 await page.waitForTimeout(2200)

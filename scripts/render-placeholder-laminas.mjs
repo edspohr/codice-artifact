@@ -1,10 +1,8 @@
-// Renders the neutral placeholder láminas as static WebP files.
-//
-// Phase 1 has no AI and no runtime filters: these images are procedural
-// monochrome noise, shaped by each movement's register (where the ink
-// lives on the page), rendered once here and served as plain files from
-// public/laminas/placeholder/. They are deterministic (seeded), so every
-// build produces the same bytes. They are not committed.
+// Renders the placeholder terrain as static WebP files: a ground per
+// region and a local formation per place. Procedural ink shaped by each
+// movement's register, rendered once here and served as plain files from
+// public/laminas/placeholder/terrain/. Deterministic (seeded), not committed.
+// The AI plates of Phase 6 replace them.
 //
 // Usage: node scripts/render-placeholder-laminas.mjs [--force]
 import { existsSync, mkdirSync, readFileSync } from 'node:fs'
@@ -141,27 +139,76 @@ const grounds = {
   // toward the banks. White exists only as the clearings where places
   // live, and as the lightening at the top.
   mar(u, v, seed, px, py) {
-    const side = Math.abs(u - 0.5) * 2 // 0 centre, 1 edge
-    // Readable ascent: the gradient alone must tell which way is up.
+    const side = Math.abs(u - 0.5) * 2
     const gradient = 0.12 + 0.88 * v
-    // Banks: the ink thins toward the sides.
     const bank = 1 - 0.5 * smoothstep(0.5, 1.0, side)
-    // Soft blotches (wet edges).
     const soft = 0.82 + 0.36 * fbm(u * 2.5 + 3, v * 9, seed + 1, 3, 0.5)
-    // Pooled blacks with hard edges, denser low.
     const poolField = fbm(u * 3.2, v * 11, seed + 5, 4, 0.5)
     const pools = smoothstep(0.52, 0.56, poolField) * smoothstep(0.4, 0.95, v)
-    // Dry-brush streaks: stretched vertically, hard-thresholded, lighter and darker.
     const streakField = fbm(u * 70, v * 5, seed + 9, 3, 0.62)
     const streakLight = smoothstep(0.3, 0.42, 1 - streakField) * 0.55
     const streakDark = smoothstep(0.6, 0.72, streakField) * 0.25
-    // Granulation.
     const grain = (speckle(px, py, seed + 13) - 0.5) * 0.1
     let d = gradient * bank * soft
     d = d * (1 - streakLight * (1 - v * 0.3)) + streakDark * d
-    // The readable ascent: a monotonic floor the streaks can never wash out.
     d = Math.max(d, gradient * 0.75 * bank)
     d = Math.max(d, pools * (0.42 + 0.56 * v) * bank)
+    d += grain
+    return Math.max(0, Math.min(1, d))
+  },
+  // Tierra: a wounded horizon. Crust strata broken by hard fractures,
+  // maximum contrast, irregular; lighter than Mar, still darker low.
+  tierra(u, v, seed, px, py) {
+    const side = Math.abs(u - 0.5) * 2
+    const gradient = 0.1 + 0.5 * v
+    const bank = 1 - 0.5 * smoothstep(0.5, 1.0, side)
+    // Irregular strata: a warped low-frequency field thresholded hard.
+    const warp = fbm(u * 2.5, v * 7, seed + 3, 4, 0.55)
+    const strata = fbm(u * 1.2 + warp * 1.6, v * 16 + warp * 2.2, seed + 5, 3, 0.5)
+    const crust = smoothstep(0.5, 0.53, strata) * (0.35 + 0.45 * v)
+    // Hard fractures: thin pale breaks across the crust, jagged.
+    const crackField = Math.abs(fbm(u * 6 + warp, v * 30, seed + 7, 4, 0.5) - 0.5)
+    const crack = 1 - (1 - smoothstep(0.008, 0.022, crackField)) * 0.8
+    // Coarse grain of dry earth.
+    const earth = 0.75 + 0.5 * fbm(u * 9, v * 26, seed + 1, 5, 0.5)
+    const grain = (speckle(px, py, seed + 11) - 0.5) * 0.14
+    let d = gradient * bank * earth
+    d = Math.max(d, (gradient * 0.6 + crust) * bank * earth)
+    d *= crack
+    d = Math.max(d, gradient * 0.55 * bank)
+    d += grain
+    return Math.max(0, Math.min(1, d))
+  },
+  // Cordillera: mineral mass, middle-high, medium density, facets with hard
+  // edges and a closed scar; an immense void above. Lighter than Tierra.
+  cordillera(u, v, seed, px, py) {
+    const side = Math.abs(u - 0.5) * 2
+    const gradient = 0.06 + 0.38 * v
+    const bank = 1 - 0.5 * smoothstep(0.5, 1.0, side)
+    const mass = smoothstep(0.1, 0.5, v)
+    // Facets: cellular-looking hard steps from quantised warped noise.
+    const warp = fbm(u * 3, v * 9, seed + 2, 3, 0.5)
+    const facetField = fbm(u * 4 + warp, v * 13 + warp, seed + 6, 2, 0.5)
+    const facet = Math.floor(facetField * 5) / 5
+    const edgeField = Math.abs(fbm(u * 4 + warp, v * 13 + warp, seed + 6, 2, 0.5) * 5 - Math.round(facetField * 5))
+    const edge = 1 - (1 - smoothstep(0.01, 0.03, edgeField)) * 0.22
+    const scar = 1 - 0.5 * Math.exp(-Math.pow((u - 0.5 - 0.12 * fbm(v * 5, 0, seed + 13, 3, 0.5)) * 16, 2)) * smoothstep(0.25, 0.8, v)
+    const grain = (speckle(px, py, seed + 17) - 0.5) * 0.08
+    let d = (gradient + 0.34 * mass * (0.3 + 0.7 * facet)) * bank * scar * edge
+    d = Math.max(d, gradient * 0.6 * bank)
+    d += grain
+    return Math.max(0, Math.min(1, d))
+  },
+  // Cielo: smoke taking off, near-white. Minimum density, a cosmic tear.
+  cielo(u, v, seed, px, py) {
+    const side = Math.abs(u - 0.5) * 2
+    const gradient = 0.02 + 0.2 * v
+    const bank = 1 - 0.4 * smoothstep(0.5, 1.0, side)
+    const wisp = fbm(u * 7, v * 2.2, seed + 4, 5, 0.62) // stretched upward
+    const tear = smoothstep(0.49, 0.51, fbm(u * 1.5, v * 9, seed + 21, 3, 0.5)) * 0.06
+    const grain = (speckle(px, py, seed + 19) - 0.5) * 0.05
+    let d = (gradient * (0.6 + 0.8 * Math.pow(wisp, 1.6)) + tear) * bank
+    d = Math.max(d, gradient * 0.7 * bank)
     d += grain
     return Math.max(0, Math.min(1, d))
   },
@@ -233,26 +280,6 @@ async function main() {
     console.log(`Rendered ${pendingTerrain.length} terrain placeholders in ${Date.now() - started} ms → public/laminas/placeholder/terrain/`)
   }
 
-  const jobs = []
-  for (const m of canon.movements) {
-    jobs.push({ file: resolve(outDir, `mother-${m.id}.webp`), register: m.id, seed: movementSeeds[m.id], t: 0.5 })
-  }
-  for (const f of canon.fragments) {
-    const m = canon.movements.find((x) => x.id === f.movement)
-    const i = m.fragments.indexOf(f.n)
-    const t = m.fragments.length > 1 ? i / (m.fragments.length - 1) : 0.5
-    jobs.push({ file: resolve(outDir, `${f.n}.webp`), register: f.movement, seed: movementSeeds[f.movement] + 1000 + f.n, t })
-  }
-  const pending = force ? jobs : jobs.filter((j) => !existsSync(j.file))
-  if (pending.length === 0) {
-    console.log('Placeholder láminas up to date.')
-    return
-  }
-  const started = Date.now()
-  for (const job of pending) {
-    await render(job.file, job.register, job.seed, job.t)
-  }
-  console.log(`Rendered ${pending.length} placeholder láminas in ${Date.now() - started} ms → public/laminas/placeholder/`)
 }
 
 main().catch((err) => {

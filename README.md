@@ -3,17 +3,16 @@
 Interactive web artwork for the 22 micro-stories of *Códice del tiempo roto* by Edmundo Spohr.
 `CLAUDE.md` is the contract for the whole build; read it first.
 
-## Phase 2 — prototype: Mar as territory
+## Phase 3 — the whole territory
 
-The territory prototype lives beside the Phase 1 journey until the author passes the gate.
+The piece is the territory: four channels stacked (Mar, Tierra, Cordillera, Cielo), three thresholds, 22 places.
 
 ```bash
-pnpm dev            # then open http://localhost:5173/?proto=territory (or the LAN address on a phone)
+pnpm dev            # http://localhost:5173 (or the LAN address on a phone)
 ```
 
-- `?proto=territory` selects the prototype; without it the old paged journey loads.
 - `?reveal=1` reveals all places (dev builds only).
-- `?place=3` glides to place 3; `?stop=5` jumps the linear path (0 epigraph, 1–4 places, 5 threshold, 6 stub).
+- `?place=3` glides to place 3; `?stop=N` jumps the linear path (0 cover, 1 epigraph, then places in order with each region's threshold after its last place).
 - `?cfg.KEY=value` overrides any value of `src/gestures/config.ts`: traction, lag, friction, currents, help bias,
   emergence and arrival distances, brush, drying, accent, clearing, sway, stamp, sound. `window.__codice.territory`
   exposes the live `Territory` and `LinearPath`.
@@ -21,18 +20,6 @@ pnpm dev            # then open http://localhost:5173/?proto=territory (or the L
 
 Firebase is not installed in this phase. `.env.local` (gitignored) holds the project's web config; `.env.example`
 lists the same keys empty. Never add a measurement ID; the piece has no analytics.
-
-## Phase 1 — static journey (kept until the Phase 2 gate)
-
-Vite + React + TypeScript (strict). No backend, no AI. Placeholder láminas are rendered at build time.
-
-```bash
-pnpm install
-pnpm dev            # renders placeholder láminas, then serves on http://localhost:5173
-pnpm test           # unit tests (canon seal, character-exact render, appendix guard, recognizers)
-pnpm test:e2e       # Playwright at 360x740 and 390x844 with touch emulation
-pnpm build          # production build (dev tooling is stripped)
-```
 
 ### Author-only
 
@@ -48,11 +35,11 @@ pnpm build          # production build (dev tooling is stripped)
 
 ### Layout of the source
 
-- `src/content/` canon loader and seal, copy, journey stations, lámina paths.
+- `src/content/` canon loader and seal, copy.
 - `src/world/` the territory outside React: geography (seeded), camera, Mar physics (traction), places, pointer input,
   the WebGL ink field (`ink/`), the loop, the linear accessible path, sound.
 - `src/territory/` the React shell of the territory: world-positioned text, seals, tally, titles, controls.
-- `src/gestures/` Phase 1 engine and recognizers; `config.ts` holds every threshold, timer and physics value.
+- `src/gestures/config.ts` holds every physics and timing value (the live overrides read it).
 - `src/views/`, `src/components/`, `src/styles/` the views, the seal, the movement titles, the tokens.
 - `scripts/` placeholder lámina renderer and the author-only canon seal.
 - `tests/` Vitest, `e2e/` Playwright.
