@@ -27,7 +27,8 @@ Language rule: code, comments, commits and docs in **English**. Everything a vis
 
 ### 3.1 Entry
 
-The epigraph alone on white. The first touch is the first mark (and, if sound is on, the first note); the white opens into the territory at the bottom of Mar.
+- **The cover.** White. The title of the work in Archivo Light 300, and beneath it the author's real signature (traced once from paper, never a handwriting typeface), stamped onto the paper with an ink impact. A touch dissolves the cover. The cover appears once per visit.
+- **The epigraph** alone on white. The first touch is the first mark (and, if sound is on, the first note); the white opens into the territory at the bottom of Mar.
 
 ### 3.2 The territory
 
@@ -69,6 +70,7 @@ The four gestures of the old concept become four ways of moving. **Starting hypo
 
 - Regions are crossed in order. The passage up to the next region is a **threshold** at the top of each region, crossed with that region's own physics at full expression. Entering a region shows its **movement title** over the ground (typography per spec §5.1).
 - **The title is an event, not an object.** It appears alone on entering the region and dissolves before any place can emerge. A title and a fragment are never on screen together.
+- **The closing of a region is an object.** At the threshold, anchored to the world, the region's title with the tally beneath it: the summary of what was done, and the passage. The ink parts around it.
 - A threshold is **always passable**: the journey never requires completeness.
 - **The tally** is the only indication of progress in the whole piece. At each threshold there is one seal impression per fragment of the region being left: **inked with its numeral if the visitor found it, blind (embossed, uninked, no numeral) if not.** No numbers, no words, no bar. A visitor who wants everything sees what is missing and goes back; anyone else walks on.
 
@@ -94,15 +96,26 @@ The four gestures of the old concept become four ways of moving. **Starting hypo
 
 Demanding, with subtle help, and never in words. The current and the grain of the ink bend toward the nearest unfound place (the help bias): strong enough to be felt and visible in the grain itself, never a pointer. When a visitor has found nothing for a long while (and especially in a virgin cycle, when there are no trails), the lean grows. Tunable; zero disables it.
 
-### 3.10 Sound (experimental, behind a config flag)
+### 3.10 Motion grammar
+
+The piece mixes the mechanics of a game with the pacing of film, through movement and transitions, never through rewards. The grammar is fixed; phases reuse it instead of inventing transitions:
+
+- Cover stamped → dissolves. Epigraph alone → the first mark opens the white.
+- Entering a region: its title as an event, alone, then gone.
+- Between places: drag, inertia, current. At a place: stillness, the arrival sequence (clearing, text, stamp with a short dip), a deliberate drag to leave.
+- Leaving a region: the closing object at the threshold, crossed with the region's physics at full expression.
+- The exit: dwell, stillness, dissolution, reprise, the lone seal.
+- The Burst: witnessed live by everyone, white, alpha.
+
+### 3.11 Sound (experimental, behind a config flag)
 
 Touching is playing a note (the epigraph says so). One sustained note per contact, low in Mar and progressively airier toward Cielo, synthesized with Web Audio, no audio files. Unlocked by the first touch on the epigraph. The piece must be complete with sound off. The author will decide after the prototype whether it stays.
 
-### 3.11 Accessibility: the linear path
+### 3.12 Accessibility: the linear path
 
 Keyboard and screen-reader users get a parallel path: "Avanzar" and "Volver" controls travel to the next and previous place in canonical order (the viewpoint glides there), thresholds included, and the full text of each place is exposed in order. This path never depends on gestures or on stillness. `prefers-reduced-motion` turns glides and physics into short fades. The canon tests run on this path.
 
-### 3.12 Wear, the Exodus and the Burst (the cycle)
+### 3.13 Wear, the Exodus and the Burst (the cycle)
 
 - Global `wear ∈ [0, 1]` = time erosion + touch erosion, both configurable in a Firestore config doc. Target cycle length: a few weeks to a few months.
 - **Signals of approach** grow with wear: fissures lengthen across the territory, the ink loses cohesion, seals stamp more unevenly. Never a counter, a percentage or text.
@@ -110,9 +123,9 @@ Keyboard and screen-reader users get a parallel path: "Avanzar" and "Volver" con
 - **Burst** (`wear ≥ 1`): every connected client witnesses it in real time (the territory atomizes, goes white, returns to alpha). Server-side the patina is deleted, the cycle number increments, the new plates and the new geography become current. Only aggregate metrics survive.
 - The Burst never waits on AI (procedural fallback), and no single visitor can cause it (per-session caps, rate limits).
 
-### 3.13 The Colofón
+### 3.14 The Colofón
 
-Outside the territory, reached only through the lone seal. Contains: how it was made and credits (author copy); the current cycle number; a **free contribution** link to an external page (`VITE_DONATION_URL`), any amount, no tiers, no pressure; an optional **email** sign-up, independent of the contribution, for the Exodus notice and news of new releases (explicit consent, single purpose, double opt-in, one-click unsubscribe; sent straight to Brevo through a Cloud Function, never stored in Firestore). A contribution buys nothing inside the piece.
+Outside the territory, reached only through the lone seal. Contains: how it was made and credits (author copy); the author's LinkedIn as a plain external link; the current cycle number; a **free contribution** link to an external page (`VITE_DONATION_URL`), any amount, no tiers, no pressure; an optional **email** sign-up, independent of the contribution, for the Exodus notice and news of new releases (explicit consent, single purpose, double opt-in, one-click unsubscribe; sent straight to Brevo through a Cloud Function, never stored in Firestore). A contribution buys nothing inside the piece.
 
 ## 4. Visual system
 
@@ -143,6 +156,7 @@ Summary:
 
 - **Frontend:** Vite + React + TypeScript (strict). React holds the shell and the DOM text; **the world is a WebGL renderer outside React** (ink field, smear, patina, physics, camera). Propose the lightest approach that meets the budget and justify any library by its bundle cost; no game engine.
 - **Text is DOM, positioned over the world** and kept in sync with the camera, so it stays selectable by assistive tech, testable character-exact and crisp at any zoom.
+- **Responsive, mobile first.** The channel is measured in portrait screens: the viewport on a phone, a portrait unit fitted to the viewport height on a wide screen, where ink still covers the whole view and the cover and epigraph sit in a readable column. Desktop moves by mouse drag, wheel or trackpad and keyboard; the experience is the same territory, not a different layout. The test suite runs on phone and desktop viewports.
 - **Firebase** (project `codice-tiempo-roto`, Blaze plan): Hosting, Firestore, Cloud Functions (2nd gen, TypeScript), Cloud Storage, App Check, a scheduled function. Web config comes from `VITE_FIREBASE_*` env vars. No Analytics. Emulator Suite for all local work.
 - **Data model (starting point):** `state/current` `{ cycle, wear, phase, updatedAt }` (one realtime listener); `config/cycle`; `patina/{cycle}_{region}` (wear grid); `metrics/{cycle}` (aggregate counters only: visits started, exits through 22, furthest region reached, places found as totals, cycle duration, sign-ups, contribution clicks). Geography is computed from the cycle number, not stored.
 - **Security:** rules deny all client writes; reads limited to `state/current`, `patina/*` and public plate files. Mutations only through callable functions with App Check, strict validation, per-session caps and rate limits.
@@ -151,7 +165,7 @@ Summary:
 
 ## 7. Non-goals
 
-No accounts. No social sharing. No comments. No gamification beyond the tally (no scores, badges, streaks, completion screens). No map. No explanatory note. No AI chat, no AI text. No English UI in v1.
+No accounts. No social sharing. No comments. No rewards: no scores, badges, streaks or completion screens. Game-like **mechanics** are welcome (consequence, physics per region, thresholds, hidden places, the gated exit, the shared wear); the tally is the only trace of progress. No map. No explanatory note. No AI chat, no AI text. No English UI in v1.
 
 ## 8. Open decisions (ask the author; do not decide)
 
