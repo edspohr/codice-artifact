@@ -174,6 +174,8 @@ export const defaultConfig = {
   TIERRA_STROKE_CAP: 0.4,
   TIERRA_HEAL_PER_S: 0.05,
   TIERRA_HEAL_DELAY_MS: 800,
+  /** Lines keep this many screens away from any place's centre. */
+  TIERRA_PLACE_CLEARANCE: 0.45,
   /** Tierra moves with short inertia and no current. */
   TIERRA_FRICTION: 0.004,
   /** Text shears along nearby damaged lines (degrees at full damage). */

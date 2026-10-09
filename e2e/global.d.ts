@@ -16,6 +16,8 @@ declare global {
           }
           isResting(): boolean
           helpStrength(): number
+          crustLines(): Array<{ y: number; integrity: number; broken: boolean }>
+          screenHeight(): number
           dirtLevel(): number
           isLookingBack(): boolean
           currentZoom(): number

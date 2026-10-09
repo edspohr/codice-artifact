@@ -4,6 +4,7 @@
 import { session } from '../app/session'
 import { config } from '../gestures/config'
 import { Camera } from './camera'
+import { blockingFloor, buildCrust, CrustState } from './crust'
 import { Exit } from './exit'
 import { Ink, type ClearBox, type InkAssets, type InkColors } from './ink/ink'
 import { MarPhysics, type Slip } from './physics'
@@ -79,6 +80,11 @@ export class Territory {
   private departAccum = 0
   /** The stamp lands with a short dip of the viewpoint. */
   private dipStart = -Infinity
+  // Tierra's crust: fracture lines that block the way up until broken by insistence.
+  private crust: CrustState | null = null
+  private crustSvg: SVGSVGElement | null = null
+  private crustDirty = true
+  private screenH = 1
   // Active help: holding the finger still gathers the grain toward the nearest unfound place.
   private holdStart: number | null = null
   private holdMoved = 0
@@ -104,6 +110,13 @@ export class Territory {
       onStamp: (p) => this.stamp(p),
     })
     this.ink = new Ink(els.canvas, this.world, opts.assets, opts.colors)
+    const tierra = this.world.regions.find((r) => r.id === 'tierra')
+    if (tierra) {
+      this.screenH = tierra.rect.h / config.TIERRA_SCREENS_H
+      const avoid = this.world.places.filter((p) => p.region === 'tierra').map((p) => p.y)
+      this.crust = new CrustState(buildCrust(tierra.rect, this.screenH, this.world.cycle, avoid))
+      this.buildCrustSvg()
+    }
     this.resize()
     this.input.attach(els.stage, {
       onStart: (s) => this.onStart(s),
@@ -132,9 +145,82 @@ export class Territory {
       this.resting = false
     }
     this.physics.touchStart(performance.now())
+    const yBefore = this.camera.y
     this.camera.moveBy(0, dy)
+    this.applyCrustFloor(yBefore)
     this.physics.touchEnd(performance.now())
     this.wake()
+  }
+
+  /** A standing fracture line holds the viewpoint below it: the way up is closed until it breaks. */
+  private applyCrustFloor(yBefore: number) {
+    if (!this.crust) return
+    const floor = blockingFloor(this.crust.crust, yBefore, this.screenH)
+    if (floor !== null && this.camera.y < floor) {
+      this.camera.y = floor
+      if (this.camera.vy < 0) this.camera.vy = 0
+    }
+  }
+
+  private buildCrustSvg() {
+    if (!this.crust) return
+    const NS = 'http://www.w3.org/2000/svg'
+    const svg = document.createElementNS(NS, 'svg')
+    svg.setAttribute('class', 'crust')
+    svg.setAttribute('aria-hidden', 'true')
+    svg.setAttribute('width', String(this.world.width))
+    svg.setAttribute('height', String(this.world.height))
+    for (const line of this.crust.crust.lines) {
+      const g = document.createElementNS(NS, 'g')
+      g.setAttribute('class', 'crust__line')
+      const d = this.jagged(line.y, line.seed)
+      for (const cls of ['crust__halo', 'crust__ridge', 'crust__crack']) {
+        const path = document.createElementNS(NS, 'path')
+        path.setAttribute('d', d)
+        path.setAttribute('class', cls)
+        g.appendChild(path)
+      }
+      svg.appendChild(g)
+    }
+    this.els.textLayer.insertBefore(svg, this.els.textLayer.firstChild)
+    this.crustSvg = svg
+  }
+
+  /** A jagged horizontal path across the channel, seeded. */
+  private jagged(y: number, seed: number): string {
+    const steps = 42
+    const w = this.world.width
+    let x = Math.sin(seed) * 0.5 + 0.5
+    const pts: string[] = []
+    for (let i = 0; i <= steps; i++) {
+      x = Math.sin(seed * 12.9898 + i * 78.233) * 43758.5453
+      const j = (x - Math.floor(x) - 0.5) * this.screenH * (i % 5 === 0 ? 0.07 : 0.025)
+      pts.push(`${((w * i) / steps).toFixed(1)},${(y + j).toFixed(1)}`)
+    }
+    return `M${pts.join(' L')}`
+  }
+
+  private syncCrustSvg() {
+    if (!this.crust || !this.crustSvg || !this.crustDirty) return
+    this.crustDirty = false
+    const groups = this.crustSvg.querySelectorAll<SVGGElement>('.crust__line')
+    this.crust.crust.lines.forEach((line, i) => {
+      const g = groups[i]
+      if (!g) return
+      g.style.setProperty('--damage', (1 - line.integrity).toFixed(3))
+      if (line.broken) g.setAttribute('data-broken', '')
+      else g.removeAttribute('data-broken')
+    })
+  }
+
+  /** Dev/test: the crust lines (y, integrity, broken). */
+  crustLines() {
+    return this.crust ? this.crust.crust.lines.map((l) => ({ y: l.y, integrity: l.integrity, broken: l.broken })) : []
+  }
+
+  /** Dev/test: one screen height in world px. */
+  screenHeight() {
+    return this.screenH
   }
 
   private resize() {
@@ -214,6 +300,7 @@ export class Territory {
     this.departAccum = 0
     this.holdStart = now
     this.holdMoved = 0
+    this.crust?.strokeStart()
     if (!this.resting) this.physics.touchStart(now)
     this.lastDragT = s.t
     this.sound.noteOn(this.height())
@@ -236,7 +323,13 @@ export class Territory {
       this.resting = false
       this.physics.touchStart(s.t)
     }
+    const yBefore = this.camera.y
     const slip = this.physics.drag(s.x, s.y, s.x - prev.x, s.y - prev.y, dt, s.t)
+    // Tierra: a finger stroke that crosses a fracture line damages it; a standing line holds the way up.
+    if (this.crust) {
+      if (this.crust.strokeSegment(slip.from, slip.to, s.t).length > 0) this.crustDirty = true
+      this.applyCrustFloor(yBefore)
+    }
     // Accumulate slip into one brush segment per frame.
     if (this.pendingSlip) {
       this.pendingSlip.to = slip.to
@@ -252,6 +345,7 @@ export class Territory {
   private onEnd() {
     if (territoryStore.get().phase === 'cover') return
     this.holdStart = null
+    this.crust?.strokeEnd(performance.now())
     if (!this.resting) this.physics.touchEnd(performance.now())
     this.sound.noteOff()
     this.wake()
@@ -491,7 +585,15 @@ export class Territory {
       active = true
     } else {
       const nearest = this.physics.helpBias > 0 ? this.places.nearestUnfound({ x: this.camera.x, y: this.camera.y }) : null
+      const yBefore = this.camera.y
       if (this.physics.step(dt, now, nearest)) active = true
+      this.applyCrustFloor(yBefore)
+    }
+
+    // The crust heals slowly where it still stands.
+    if (this.crust && this.crust.tick(now, dt)) {
+      this.crustDirty = true
+      active = true
     }
 
     // Active help: hold the finger still to gather the grain toward the nearest unfound place.
@@ -622,6 +724,26 @@ export class Territory {
     layer.style.setProperty('--sway-x', reduced ? '0px' : `${this.sway.x.toFixed(2)}px`)
     layer.style.setProperty('--sway-r', reduced ? '0deg' : `${this.sway.r.toFixed(3)}deg`)
     layer.style.setProperty('--open', (this.revealAll && this.open <= 0 ? 1 : this.open).toFixed(3))
+    this.syncCrustSvg()
+    this.syncShear(reduced)
+  }
+
+  /** Tierra: a text block shears along the damaged line nearest to it. */
+  private syncShear(reduced: boolean) {
+    if (!this.crust) return
+    const lines = this.crust.crust.lines
+    for (const el of this.els.textLayer.querySelectorAll<HTMLElement>('.place[data-region="tierra"]')) {
+      const y = Number(el.dataset.y)
+      let shear = 0
+      for (const line of lines) {
+        const d = Math.abs(line.y - y)
+        if (d > this.screenH * 0.8) continue
+        const damage = line.broken ? 1 : 1 - line.integrity
+        const s = damage * (1 - d / (this.screenH * 0.8)) * config.TIERRA_SHEAR_DEG * (line.y < y ? -1 : 1)
+        if (Math.abs(s) > Math.abs(shear)) shear = s
+      }
+      el.style.setProperty('--shear', reduced ? '0deg' : `${shear.toFixed(2)}deg`)
+    }
   }
 
   private render() {

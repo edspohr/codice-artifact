@@ -70,7 +70,8 @@ export class MarPhysics {
   /** Free motion: inertia and currents. Returns true while still moving. */
   step(dt: number, now: number, nearestUnfound: Vec2 | null): boolean {
     if (this.touching) return true
-    const decay = Math.exp(-config.MAR_FRICTION * dt)
+    const friction = this.regionId() === 'tierra' ? config.TIERRA_FRICTION : config.MAR_FRICTION
+    const decay = Math.exp(-friction * dt)
     this.camera.vx *= decay
     this.camera.vy *= decay
 
@@ -81,7 +82,7 @@ export class MarPhysics {
 
     const speed = Math.hypot(this.camera.vx, this.camera.vy)
     // At rest: nothing left to carry (the bank's return current alone, once slow, does not keep the loop alive).
-    const carried = this.currentSpeed(now)
+    const carried = this.currentSpeed(now, this.camera.y)
     if ((speed < 0.0005 && Math.hypot(current.x, current.y) < 0.0005) || (carried <= 0 && speed < 0.01)) {
       this.camera.vx = 0
       this.camera.vy = 0
@@ -131,8 +132,14 @@ export class MarPhysics {
     return { x: cx / m, y: cy / m }
   }
 
-  /** Speed of the carrying current (px/ms), after its fade since the last touch. */
-  currentSpeed(now: number): number {
+  /** The id of the region the viewpoint is in. */
+  regionId() {
+    return regionAt(this.world, this.camera.y).id
+  }
+
+  /** Speed of the carrying current (px/ms) at a height, after its fade since the last touch. Tierra has none. */
+  currentSpeed(now: number, y: number = this.camera.y): number {
+    if (regionAt(this.world, y).id === 'tierra') return 0
     let speed = config.MAR_CURRENT_SPEED / 1000
     const fade = config.MAR_CURRENT_FADE_S
     if (fade > 0) {
@@ -144,7 +151,7 @@ export class MarPhysics {
 
   /** Current velocity (px/ms) at a world position. */
   currentAt(x: number, y: number, now: number, nearestUnfound: Vec2 | null): Vec2 {
-    const speed = this.currentSpeed(now)
+    const speed = this.currentSpeed(now, y)
     const dir = this.currentDirection(x, y, nearestUnfound)
     let vx = dir.x * speed
     let vy = dir.y * speed

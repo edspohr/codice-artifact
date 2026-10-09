@@ -43,6 +43,55 @@
   opacity: var(--open);
 }
 
+/* --- Tierra: the crust's fracture lines ---------------------------------------- */
+
+.crust {
+  position: absolute;
+  left: 0;
+  top: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+.crust__line {
+  --damage: 0;
+}
+/* A standing line: a dark ridge of crust with a soft ink halo. */
+.crust__halo {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: calc(16px - var(--damage) * 6px);
+  stroke-linejoin: round;
+  opacity: calc(0.22 - var(--damage) * 0.1);
+  filter: blur(3px);
+}
+.crust__ridge {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: calc(5px - var(--damage) * 2px);
+  stroke-linejoin: miter;
+  opacity: calc(0.85 - var(--damage) * 0.35);
+}
+/* Damage opens a pale crack along it. */
+.crust__crack {
+  fill: none;
+  stroke: var(--paper);
+  stroke-width: calc(var(--damage) * 7px);
+  stroke-linejoin: miter;
+  stroke-dasharray: calc(14px + var(--damage) * 30px) 6px;
+}
+/* Broken: the ridge is gone, only the scar remains. */
+.crust__line[data-broken] .crust__halo {
+  opacity: 0.06;
+}
+.crust__line[data-broken] .crust__ridge {
+  opacity: 0.18;
+  stroke-dasharray: 22px 18px;
+}
+.crust__line[data-broken] .crust__crack {
+  stroke-width: 3px;
+  opacity: 0.6;
+}
+
 /* --- places ---------------------------------------------------------------- */
 
 .place {
@@ -65,7 +114,7 @@
 
 .place__text {
   position: relative;
-  transform: translate(var(--sway-x), 0) rotate(var(--sway-r));
+  transform: translate(var(--sway-x), 0) rotate(var(--sway-r)) skewY(var(--shear, 0deg));
   transform-origin: 50% 100%;
   outline: none;
 }

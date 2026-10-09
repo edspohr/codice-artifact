@@ -21,6 +21,8 @@ export function PlaceText({ place, status }: { place: Place; status: PlaceStatus
     <div
       className="place"
       data-n={place.n}
+      data-region={place.region}
+      data-y={Math.round(place.y)}
       data-state={status.state}
       data-found={status.found ? '' : undefined}
       style={{
