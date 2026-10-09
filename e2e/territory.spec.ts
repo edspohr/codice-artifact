@@ -159,13 +159,15 @@ test.describe('territory: entry and the linear path', () => {
     await expect(page.locator('.region-title')).toHaveCount(0, { timeout: 6000 })
     const w = viewport!.width
     const h = viewport!.height
-    for (const f of [0.95, 0.75, 0.5, 0.3, 0.1]) {
+    // Inside the channel, below the threshold's colossus (which is a mass of ink by design).
+    for (const f of [0.95, 0.75, 0.5, 0.3, 0.16]) {
       const bands = await page.evaluate(
         ([f, w, h]) => {
           const t = window.__codice!.territory!.territory
           const region = t.world.regions[0]!.rect
           t.camera.x = region.x + region.w / 2
           t.camera.y = region.y + region.h * f
+          t.camera.clamp()
           t.glideTo({ x: t.camera.x, y: t.camera.y })
           const mean = (yFrac: number) => {
             let sum = 0
@@ -323,6 +325,95 @@ test.describe('territory: touch', () => {
     )
     for (const px of samples) expect(contrast(ink, px)).toBeGreaterThanOrEqual(4.5)
     void w
+  })
+
+  test('help is invoked by holding still, and dispelled on release', async ({ page, viewport }) => {
+    await page.goto(`${BASE}&cfg.MAR_CURRENT_SPEED=0`)
+    await ready(page)
+    await enter(page)
+    await expect(page.locator('.region-title')).toHaveCount(0, { timeout: 6000 })
+    const s = await cdp(page)
+    const w = viewport!.width
+    const h = viewport!.height
+    const strength = () => page.evaluate(() => window.__codice!.territory!.territory.helpStrength())
+    expect(await strength()).toBe(0)
+    // Hold the finger still: the help rises.
+    await s.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: w / 2, y: h / 2 }] })
+    await page.waitForTimeout(1800)
+    const held = await strength()
+    expect(held).toBeGreaterThan(0.5)
+    // Release: it falls.
+    await s.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+    await page.waitForTimeout(1800)
+    expect(await strength()).toBeLessThan(held * 0.5)
+    // A drag is not a hold.
+    await swipe(s, { x: w * 0.3, y: h * 0.6 }, { x: w * 0.7, y: h * 0.6 }, 20, 40)
+    expect(await strength()).toBeLessThan(0.2)
+  })
+
+  test('finding has a cost: a scar around the place and dirtier hands after each stamp', async ({ page }) => {
+    await page.goto(`${BASE}&cfg.MAR_CURRENT_SPEED=0`)
+    await ready(page)
+    await enter(page)
+    const dirt = () => page.evaluate(() => window.__codice!.territory!.territory.dirtLevel())
+    expect(await dirt()).toBe(0)
+    await page.keyboard.press('ArrowRight')
+    await expect(page.locator('.place[data-n="1"]')).toHaveAttribute('data-state', 'found', { timeout: 10_000 })
+    await expect.poll(() => page.evaluate(() => window.__codice!.territory!.territory.isResting()), { timeout: 5000 }).toBe(true)
+    expect(await dirt()).toBe(1)
+    // The scar: a jagged ring of broken ink around the place, outside the clearing. Sample the ring
+    // above and below the place (in view after settling); some of it falls on broken ink.
+    const samples = await page.evaluate(() => {
+      const t = window.__codice!.territory!.territory
+      const p = t.world.places.find((x) => x.n === 1)!
+      const short = t.world.short
+      const r = (window.__codice!.config as { SCAR_RADIUS: number }).SCAR_RADIUS * short
+      const cx = p.x - t.camera.x + window.innerWidth / 2
+      const cy = p.y - t.camera.y + window.innerHeight / 2
+      const out: number[] = []
+      for (const k of [0.9, 0.95, 1, 1.05, 1.1]) {
+        for (const sy of [cy - r * k, cy + r * k]) {
+          for (const dx of [-30, -15, 0, 15, 30]) {
+            const sx = cx + dx
+            if (sx > 4 && sx < window.innerWidth - 4 && sy > 4 && sy < window.innerHeight - 4) out.push(t.readPixel(sx, sy)[0])
+          }
+        }
+      }
+      return out
+    })
+    expect(samples.length).toBeGreaterThan(0)
+    expect(Math.min(...samples)).toBeLessThan(120)
+  })
+
+  test('the threshold is a colossus: a mass of ink across the band, and a look back when first crossed', async ({ page, viewport }) => {
+    await page.goto(`${BASE}&cfg.MAR_CURRENT_SPEED=0&cfg.LOOKBACK_MS=1500`)
+    await ready(page)
+    await enter(page)
+    await expect(page.locator('.region-title')).toHaveCount(0, { timeout: 6000 })
+    // Frame the band from inside Mar; sample the band away from the closing mark's clearing.
+    const dark = await page.evaluate(
+      ([w]) => {
+        const t = window.__codice!.territory!.territory
+        const th = (t.world as unknown as { thresholds: Array<{ band: { x: number; y: number; w: number; h: number } }> }).thresholds[0]!
+        t.camera.x = th.band.x + th.band.w / 2
+        t.camera.y = th.band.y + th.band.h / 2 + 250
+        t.glideTo({ x: t.camera.x, y: t.camera.y })
+        const y = window.innerHeight / 2 - 250
+        return [t.readPixel(w * 0.06, y)[0], t.readPixel(w * 0.94, y)[0]]
+      },
+      [viewport!.width] as const,
+    )
+    for (const v of dark) expect(v).toBeLessThan(110)
+    // Cross upward: the look back plays once, zooming out and back.
+    await page.evaluate(() => {
+      const t = window.__codice!.territory!.territory
+      t.glideTo({ x: t.camera.x, y: t.camera.y - 900 })
+    })
+    await expect.poll(() => page.evaluate(() => window.__codice!.territory!.territory.isLookingBack()), { timeout: 5000 }).toBe(true)
+    await expect.poll(() => page.evaluate(() => window.__codice!.territory!.territory.currentZoom()), { timeout: 3000 }).toBeLessThan(0.6)
+    await expect.poll(() => page.evaluate(() => window.__codice!.territory!.territory.isLookingBack()), { timeout: 5000 }).toBe(false)
+    expect(await page.evaluate(() => window.__codice!.territory!.territory.currentZoom())).toBe(1)
+    expect(await page.locator('.territory').getAttribute('data-region')).toBe('stub')
   })
 
   test('edge touches are ignored', async ({ page, viewport }) => {

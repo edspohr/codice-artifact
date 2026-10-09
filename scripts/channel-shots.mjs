@@ -40,5 +40,13 @@ await page.evaluate(() => {
 })
 await page.waitForTimeout(1500)
 await page.screenshot({ path: `${out}/5-closing-mar.png` })
+// The look back: cross the threshold upward and catch the pull-back mid-way.
+await page.evaluate(() => {
+  const t = window.__codice.territory.territory
+  t.glideTo({ x: t.camera.x, y: t.camera.y - 900 })
+})
+await page.waitForFunction(() => window.__codice.territory.territory.currentZoom() < 0.45, null, { timeout: 8000 })
+await page.waitForTimeout(250)
+await page.screenshot({ path: `${out}/6-look-back.png` })
 await browser.close()
 console.log('done')

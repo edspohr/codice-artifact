@@ -132,18 +132,52 @@ describe('Mar physics: traction', () => {
     setConfig('BANK_RETURN', 0)
     const { camera, physics } = setup()
     const target = { x: camera.x + 1000, y: camera.y }
-    setConfig('MAR_HELP_BIAS', 1)
+    physics.helpBias = 1
     const biased = physics.currentDirection(camera.x, camera.y, target)
     expect(biased.x).toBeCloseTo(1, 5)
     expect(Math.abs(biased.y)).toBeLessThan(1e-6)
-    setConfig('MAR_HELP_BIAS', 0.45)
+    physics.helpBias = 0.45
     const bent = physics.currentDirection(camera.x, camera.y, target)
     expect(bent.x).toBeGreaterThan(0.3)
     expect(bent.y).toBeLessThan(-0.3)
-    setConfig('MAR_HELP_BIAS', 0)
+    physics.helpBias = 0
     const free = physics.currentAt(camera.x, camera.y, 0, target)
     const freeNoTarget = physics.currentAt(camera.x, camera.y, 0, null)
     expect(free).toEqual(freeNoTarget)
     expect(free.y).toBeLessThan(0)
+  })
+
+  it('at rest the help is faint and the current runs up; the passive bias is the default', () => {
+    const { physics } = setup()
+    expect(physics.helpBias).toBe(config.MAR_HELP_BIAS)
+    expect(config.MAR_HELP_BIAS).toBeLessThan(0.15)
+    expect(config.MAR_HELP_ACTIVE_BIAS).toBeGreaterThan(0.7)
+  })
+
+  it('the threshold is a colossus: the current at its fastest and less traction inside the band', () => {
+    setConfig('MAR_LAG_MS', 0)
+    setConfig('BANK_RETURN', 0)
+    setConfig('MAR_CURRENT_FADE_S', 0)
+    const { world, camera, physics } = setup()
+    const band = world.thresholds[0]!.band
+    const mar = world.regions[0]!.rect
+    const centreX = mar.x + mar.w / 2
+    physics.helpBias = 0
+    const inside = physics.currentAt(centreX, band.y + band.h * 0.75, 0, null)
+    const below = physics.currentAt(centreX, band.y + band.h + 400, 0, null)
+    expect(Math.hypot(inside.x, inside.y)).toBeCloseTo(Math.hypot(below.x, below.y) * config.THRESHOLD_CURRENT_MULT, 6)
+    // Same finger motion, less world motion inside the band.
+    camera.x = centreX
+    camera.y = band.y + band.h + 400
+    physics.touchStart(0)
+    const y0 = camera.y
+    physics.drag(200, 600, 0, -40, 16, 16)
+    const freeMove = Math.abs(camera.y - y0)
+    camera.y = band.y + band.h * 0.75
+    camera.vy = 0
+    const y1 = camera.y
+    physics.drag(200, 560, 0, -40, 16, 32)
+    const bandMove = Math.abs(camera.y - y1)
+    expect(bandMove).toBeCloseTo(freeMove * (config.THRESHOLD_TRACTION / config.MAR_TRACTION), 3)
   })
 })

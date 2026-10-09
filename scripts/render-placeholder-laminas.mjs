@@ -129,12 +129,6 @@ const GROUND_W = 640
 const GROUND_H = 2560 // a channel, 1:4
 const FORM_SIZE = 512
 
-function edgeFade(u, v, width) {
-  const fx = Math.min(smoothstep(0, width, u), smoothstep(0, width, 1 - u))
-  const fy = Math.min(smoothstep(0, width, v), smoothstep(0, width, 1 - v))
-  return fx * fy
-}
-
 // Fine, hard speckle for granulation.
 function speckle(x, y, seed) {
   return hash2(x, y, seed)
