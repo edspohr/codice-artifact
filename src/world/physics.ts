@@ -3,8 +3,9 @@
 // the ink, and slip is what smears. Each region is a traction profile:
 // - Mar: slippery, long inertia, then a current up the channel.
 // - Tierra: short inertia, no current (its crust blocks the way, see crust.ts).
-// - Cordillera: no inertia, no current; going up costs more than sideways,
-//   and pulling up without pause tires (traction falls, rest recovers).
+// - Cordillera: no inertia, no current; you climb by stretches: pull up
+//   (the rock barely gives), let go, and the viewpoint rises one stretch
+//   with weight. Stretches without rest shorten (fatigue); rest recovers.
 // - Cielo: little traction; a flick sets a drift that stillness sustains,
 //   slowing to a minimum, and only a touch stops it.
 import { config } from '../gestures/config'
@@ -28,8 +29,13 @@ export class MarPhysics {
   private camera: Camera
   /** Effective help bias (0..1): the passive bias at rest, the active one while the help is invoked. */
   helpBias = config.MAR_HELP_BIAS
-  /** Cordillera's fatigue (0 rested, 1 exhausted). */
+  /** Set by the loop when an emerged place is near: Mar's current calms so the text is not carried away. */
+  calm = false
+  /** Cordillera's fatigue (0 rested, 1 exhausted), the pull of the current touch, and the stretch still to rise. */
   fatigue = 0
+  private pull = 0
+  private rung = 0
+  private restSince = 0
 
   constructor(world: World, camera: Camera) {
     this.world = world
@@ -39,11 +45,18 @@ export class MarPhysics {
   touchStart(now: number) {
     this.touching = true
     this.lastTouchAt = now
+    const region = this.regionId()
     // Cielo: touching again stops the drift.
-    if (this.regionId() === 'cielo') {
+    if (region === 'cielo') {
       this.camera.vx = 0
       this.camera.vy = 0
     }
+    // Cordillera: grabbing the rock stops a stretch; rest since the last release recovers.
+    if (region === 'cordillera') {
+      this.rung = 0
+      this.fatigue = Math.max(0, this.fatigue - (config.CORDILLERA_RECOVER_PER_S * Math.max(0, now - this.restSince)) / 1000)
+    }
+    this.pull = 0
   }
 
   /**
@@ -63,10 +76,10 @@ export class MarPhysics {
     const inBand = this.inThreshold(this.camera.y) ? config.THRESHOLD_TRACTION / Math.max(0.01, config.MAR_TRACTION) : 1
     const lateralTraction = base * inBand * (1 - config.BANK_RESISTANCE * this.bankFactor(this.camera.x))
     let verticalTraction = base * inBand
-    // Cordillera: the way up is heavy, and it tires. A finger moving down pulls the world up.
+    // Cordillera: pulling up (a finger moving down) meets tension; the climb comes on release.
     if (region === 'cordillera' && fdy > 0) {
-      verticalTraction *= config.CORDILLERA_UP_COST * (1 - config.CORDILLERA_FATIGUE_MAX * this.fatigue)
-      this.fatigue = Math.min(1, this.fatigue + fdy / Math.max(1, config.CORDILLERA_FATIGUE_PX))
+      verticalTraction *= config.CORDILLERA_TENSION
+      this.pull += fdy
     }
     const targetVx = (-fdx * lateralTraction) / safeDt
     const targetVy = (-fdy * verticalTraction) / safeDt
@@ -86,10 +99,16 @@ export class MarPhysics {
     this.touching = false
     this.lastTouchAt = now
     const region = this.regionId()
-    // Cordillera: no inertia. Cielo: the flick becomes a drift.
+    // Cordillera: no inertia; a pull long enough lifts one stretch. Cielo: the flick becomes a drift.
     if (region === 'cordillera') {
       this.camera.vx = 0
       this.camera.vy = 0
+      if (this.pull >= config.CORDILLERA_PULL_MIN_PX) {
+        this.rung = config.CORDILLERA_RUNG_SCREENS * this.camera.viewH * (1 - config.CORDILLERA_FATIGUE_MAX * this.fatigue)
+        this.fatigue = Math.min(1, this.fatigue + config.CORDILLERA_FATIGUE_PER_RUNG)
+      }
+      this.pull = 0
+      this.restSince = now
     } else if (region === 'cielo') {
       this.camera.vx *= config.CIELO_FLICK_GAIN
       this.camera.vy *= config.CIELO_FLICK_GAIN
@@ -98,14 +117,24 @@ export class MarPhysics {
 
   /** Free motion: inertia and currents. Returns true while still moving. */
   step(dt: number, now: number, nearestUnfound: Vec2 | null): boolean {
-    // Cordillera's fatigue recovers while the finger rests.
-    if (!this.touching && this.fatigue > 0) this.fatigue = Math.max(0, this.fatigue - (config.CORDILLERA_RECOVER_PER_S * dt) / 1000)
     if (this.touching) return true
     const region = this.regionId()
-    if (region === 'cordillera') {
+    if (region === 'cordillera' || this.rung > 0) {
       this.camera.vx = 0
       this.camera.vy = 0
-      return this.fatigue > 0
+      // The stretch rises with weight: fast at first, settling at the end.
+      // Rest (and recovery) begins when the stretch has settled.
+      if (this.rung <= 1) {
+        if (this.rung > 0) this.restSince = now
+        this.rung = 0
+        return false
+      }
+      const d = this.rung * (1 - Math.exp(-dt / Math.max(1, config.CORDILLERA_RUNG_MS)))
+      const y = this.camera.y
+      this.camera.moveBy(0, -d)
+      this.rung = this.camera.y === y ? 0 : this.rung - d
+      if (this.rung <= 0) this.restSince = now
+      return this.rung > 0
     }
     if (region === 'cielo') {
       const speed = Math.hypot(this.camera.vx, this.camera.vy)
@@ -187,7 +216,7 @@ export class MarPhysics {
   /** Speed of the carrying current (px/ms) at a height, after its fade since the last touch. Tierra has none. */
   currentSpeed(now: number, y: number = this.camera.y): number {
     if (regionAt(this.world, y).id !== 'mar') return 0
-    let speed = config.MAR_CURRENT_SPEED / 1000
+    let speed = (config.MAR_CURRENT_SPEED / 1000) * (this.calm ? config.CURRENT_NEAR_PLACE : 1)
     const fade = config.MAR_CURRENT_FADE_S
     if (fade > 0) {
       const t = (now - this.lastTouchAt) / 1000

@@ -38,6 +38,14 @@ export const defaultConfig = {
   EMERGE_DISTANCE: 0.6,
   /** Arrival (the stamp) at this distance (× short). */
   ARRIVE_DISTANCE: 0.2,
+  /** An emerged place only disperses beyond this multiple of the emergence distance. */
+  DISPERSE_HYSTERESIS: 1.6,
+  /** Mar's current calms near an emerged, unfound place (multiplier on its speed). */
+  CURRENT_NEAR_PLACE: 0.15,
+  /** The epigraph: from the cover's dismissal, read for at least this long (its fade-in included);
+   *  then a tap or a deliberate drag opens the territory (ms, px). */
+  EPIGRAPH_MIN_MS: 4500,
+  EPIGRAPH_DRAG_PX: 60,
   /** Emergence and dispersion times (ms). */
   EMERGE_MS: 700,
   DISPERSE_MS: 900,
@@ -80,9 +88,6 @@ export const defaultConfig = {
   THRESHOLD_CURRENT_MULT: 3,
   THRESHOLD_TRACTION: 0.5,
   THRESHOLD_MASS: 0.9,
-  /** Crossing a threshold upward for the first time: a brief look back down the channel (zoom, ms). 0 disables. */
-  LOOKBACK_ZOOM: 0.42,
-  LOOKBACK_MS: 3200,
   /** The camera may overshoot the world edge by this many px (0 = hard edge). */
   CAMERA_EDGE_SOFT: 0,
   /** Threshold band height (screens). */
@@ -185,13 +190,18 @@ export const defaultConfig = {
   /** Text shears along nearby damaged lines (degrees at full damage). */
   TIERRA_SHEAR_DEG: 2.5,
 
-  // --- Cordillera: weight ---
-  /** Lateral traction; going up costs more (multiplier on upward traction). No inertia, no current. */
+  // --- Cordillera: climbing by stretches ---
+  /** Lateral traction. No inertia, no current. */
   CORDILLERA_TRACTION: 0.6,
-  CORDILLERA_UP_COST: 0.45,
-  /** Fatigue: upward drag distance (px) that tires fully, the most traction it can take, recovery per second at rest. */
-  CORDILLERA_FATIGUE_PX: 1600,
-  CORDILLERA_FATIGUE_MAX: 0.85,
+  /** While pulling up, the rock barely gives (tension). Releasing a pull of at least PULL_MIN px lifts one stretch. */
+  CORDILLERA_TENSION: 0.12,
+  CORDILLERA_PULL_MIN_PX: 50,
+  /** A stretch, in screens, and its weighty ease (time constant, ms). */
+  CORDILLERA_RUNG_SCREENS: 0.5,
+  CORDILLERA_RUNG_MS: 260,
+  /** Fatigue: added per stretch; at full fatigue a stretch shrinks by FATIGUE_MAX; recovery per second of rest. */
+  CORDILLERA_FATIGUE_PER_RUNG: 0.22,
+  CORDILLERA_FATIGUE_MAX: 0.7,
   CORDILLERA_RECOVER_PER_S: 0.35,
 
   // --- Cielo: release ---

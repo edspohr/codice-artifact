@@ -46,6 +46,17 @@ export class Places {
     return out
   }
 
+  /** An emerged (emerging or present) unfound place near a point, if any. */
+  emergedNear(from: Vec2): Vec2 | null {
+    const limit = config.EMERGE_DISTANCE * this.world.short * config.DISPERSE_HYSTERESIS
+    for (const p of this.world.places) {
+      const s = this.get(p.n)
+      if (s.found || s.reveal <= 0) continue
+      if (Math.hypot(p.x - from.x, p.y - from.y) <= limit) return { x: p.x, y: p.y }
+    }
+    return null
+  }
+
   nearestUnfound(from: Vec2): Vec2 | null {
     let best: Place | null = null
     let bestD = Infinity
@@ -82,7 +93,9 @@ export class Places {
     for (const p of this.world.places) {
       const s = this.get(p.n)
       const d = Math.hypot(p.x - centre.x, p.y - centre.y)
-      const near = revealAll || d <= emergeD
+      // Hysteresis: once emerging or present, a place holds until the viewpoint is clearly away.
+      const holding = s.reveal > 0 && d <= emergeD * config.DISPERSE_HYSTERESIS
+      const near = revealAll || d <= emergeD || holding
       const before = s.state
       const beforeReveal = s.reveal
 

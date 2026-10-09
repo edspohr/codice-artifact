@@ -118,6 +118,11 @@
 }
 .place__text .canon-line {
   color: var(--ink);
+  /* A faint halo of paper around the letters: the ink keeps its distance. */
+  text-shadow:
+    0 0 3px var(--paper),
+    0 0 8px var(--paper),
+    0 0 16px rgba(252, 252, 252, 0.7);
 }
 /* Cielo: the ink of the text thins with height (alpha floor set from the contrast floor). */
 .place[data-region='cielo'] .place__text .canon-line {
@@ -285,7 +290,7 @@
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
-  gap: 2.2rem;
+  gap: 3.6rem;
   padding: 0 var(--gutter);
   margin: 0 auto;
   max-width: var(--stage-max-w);
@@ -308,7 +313,8 @@
 }
 .cover__stamp {
   position: relative;
-  width: min(18rem, 62vw);
+  align-self: flex-start;
+  width: min(12.5rem, 44vw);
   animation: cover-stamp var(--cover-stamp-ms, 520ms) cubic-bezier(0.2, 0.9, 0.3, 1) var(--cover-stamp-delay, 700ms) both;
 }
 .cover__signature {

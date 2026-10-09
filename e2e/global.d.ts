@@ -19,8 +19,7 @@ declare global {
           crustLines(): Array<{ y: number; integrity: number; broken: boolean }>
           screenHeight(): number
           dirtLevel(): number
-          isLookingBack(): boolean
-          currentZoom(): number
+
           glideTo(to: { x: number; y: number }, onDone?: () => void): void
           readPixel(sx: number, sy: number): [number, number, number]
           getOpen(): number

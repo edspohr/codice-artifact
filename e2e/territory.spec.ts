@@ -17,7 +17,7 @@ const canon: Canon = JSON.parse(
   readFileSync(resolve(fileURLToPath(new URL('.', import.meta.url)), '../src/content/codice.canon.json'), 'utf8'),
 )
 
-const BASE = '/?cfg.SOUND_ENABLED=0'
+const BASE = '/?cfg.SOUND_ENABLED=0&cfg.EPIGRAPH_MIN_MS=0'
 
 async function ready(page: Page) {
   await expect(page.locator('.territory[data-ready]')).toHaveCount(1, { timeout: 15_000 })
@@ -438,8 +438,8 @@ test.describe('territory: touch', () => {
     expect(Math.min(...samples)).toBeLessThan(120)
   })
 
-  test('the threshold is a colossus: a mass of ink across the band, and a look back when first crossed', async ({ page, viewport }) => {
-    await page.goto(`${BASE}&cfg.MAR_CURRENT_SPEED=0&cfg.LOOKBACK_MS=1500`)
+  test('the threshold is a colossus: a mass of ink across the band, crossed by the visitor into the next region', async ({ page, viewport }) => {
+    await page.goto(`${BASE}&cfg.MAR_CURRENT_SPEED=0`)
     await ready(page)
     await enter(page)
     await expect(page.locator('.region-title')).toHaveCount(0, { timeout: 6000 })
@@ -457,7 +457,7 @@ test.describe('territory: touch', () => {
       [viewport!.width] as const,
     )
     for (const v of dark) expect(v).toBeLessThan(110)
-    // Cross upward by the visitor's own drag (a glide of the linear path never looks back).
+    // Cross upward by the visitor's own drag: the next region, no pulled-back view, no zoom.
     const s = await cdp(page)
     const h = viewport!.height
     for (let i = 0; i < 6; i++) {
@@ -465,15 +465,12 @@ test.describe('territory: touch', () => {
       if ((await page.locator('.territory').getAttribute('data-region')) !== 'mar') break
       await swipe(s, { x: viewport!.width / 2, y: h * 0.2 }, { x: viewport!.width / 2, y: h * 0.85 }, 14, 16)
     }
-    await expect.poll(() => page.evaluate(() => window.__codice!.territory!.territory.isLookingBack()), { timeout: 5000 }).toBe(true)
-    await expect.poll(() => page.evaluate(() => window.__codice!.territory!.territory.currentZoom()), { timeout: 3000 }).toBeLessThan(0.6)
-    await expect.poll(() => page.evaluate(() => window.__codice!.territory!.territory.isLookingBack()), { timeout: 5000 }).toBe(false)
-    expect(await page.evaluate(() => window.__codice!.territory!.territory.currentZoom())).toBe(1)
-    expect(await page.locator('.territory').getAttribute('data-region')).toBe('tierra')
+    await expect.poll(() => page.locator('.territory').getAttribute('data-region'), { timeout: 5000 }).toBe('tierra')
+    expect(await page.locator('.world-text').evaluate((el) => (el as HTMLElement).style.transform)).not.toContain('scale')
   })
 
   test('Tierra: a fracture line closes the way up; insistence breaks it and it stays broken', async ({ page, viewport }) => {
-    await page.goto(`${BASE}&cfg.TIERRA_HEAL_PER_S=0&cfg.LOOKBACK_ZOOM=0`)
+    await page.goto(`${BASE}&cfg.TIERRA_HEAL_PER_S=0`)
     await ready(page)
     await enter(page)
     const s = await cdp(page)
@@ -515,6 +512,64 @@ test.describe('territory: touch', () => {
     await page.waitForTimeout(400)
     expect((await cameraOf(page)).y).toBeLessThan(line.floor - 50)
     expect((await page.evaluate(() => window.__codice!.territory!.territory.crustLines())).find((l) => l.y === line.y)!.broken).toBe(true)
+  })
+
+  test('the epigraph is read before it gives way: a brush or an early tap does not open the territory', async ({ page, viewport }) => {
+    await page.goto('/?cfg.SOUND_ENABLED=0&cfg.EPIGRAPH_MIN_MS=2500')
+    // (the minimum counts from the cover's dismissal)
+    await ready(page)
+    const s = await cdp(page)
+    const w = viewport!.width
+    const h = viewport!.height
+    await tap(s, { x: w / 2, y: h * 0.7 })
+    await expect(page.locator('.territory')).toHaveAttribute('data-phase', 'epigraph')
+    // Too early: a tap does nothing.
+    await page.waitForTimeout(400)
+    await tap(s, { x: w / 2, y: h * 0.7 })
+    await page.waitForTimeout(300)
+    expect(await page.locator('.territory').getAttribute('data-phase')).toBe('epigraph')
+    // Once read: a small brush still does nothing, a tap opens.
+    await page.waitForTimeout(3000)
+    await swipe(s, { x: w * 0.5, y: h * 0.6 }, { x: w * 0.5 + 20, y: h * 0.6 + 15 }, 5, 20)
+    await page.waitForTimeout(300)
+    expect(await page.locator('.territory').getAttribute('data-phase')).toBe('epigraph')
+    await tap(s, { x: w / 2, y: h * 0.7 })
+    await expect(page.locator('.territory')).toHaveAttribute('data-phase', 'territory')
+  })
+
+  test('with many places found, the text being read still has the ink cleared beneath it', async ({ page }) => {
+    // Walk the linear path to place 12, stamping 1–11 on the way, so many text blocks stay mounted.
+    await page.goto(BASE)
+    await ready(page)
+    for (let i = 0; i < 15; i++) {
+      await page.keyboard.press('ArrowRight')
+      await page.waitForTimeout(i < 2 ? 300 : 700)
+    }
+    const place = page.locator('.place[data-n="12"]')
+    await expect(place).toHaveAttribute('data-state', 'found', { timeout: 20_000 })
+    await expect.poll(() => page.evaluate(() => window.__codice!.territory!.territory.isResting()), { timeout: 8000 }).toBe(true)
+    expect(await page.locator('[data-clear]').count()).toBeGreaterThan(8)
+    const worst = await page.evaluate(() => {
+      const t = window.__codice!.territory!.territory
+      const lum = ([r, g, b]: number[]) => {
+        const f = (c: number) => {
+          const v = c / 255
+          return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)
+        }
+        return 0.2126 * f(r!) + 0.7152 * f(g!) + 0.0722 * f(b!)
+      }
+      const ink = lum([22, 22, 22])
+      let worst = Infinity
+      for (const el of Array.from(document.querySelectorAll('.place[data-n="12"] [data-canon-line]')) as HTMLElement[]) {
+        const r = el.getBoundingClientRect()
+        for (const fx of [0.1, 0.5, 0.9]) {
+          const bg = lum(t.readPixel(r.left + r.width * fx, r.top + r.height / 2))
+          worst = Math.min(worst, (Math.max(bg, ink) + 0.05) / (Math.min(bg, ink) + 0.05))
+        }
+      }
+      return worst
+    })
+    expect(worst).toBeGreaterThanOrEqual(4.5)
   })
 
   test('Cielo: the highest text thins but stays above 4.5:1 over the ground beneath it', async ({ page }) => {

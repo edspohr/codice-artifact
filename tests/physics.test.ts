@@ -194,7 +194,7 @@ describe('physics per region', () => {
     return { world, camera, physics }
   }
 
-  it('Cordillera: no inertia, no current; up costs more than sideways', () => {
+  it('Cordillera: no inertia; pulling up barely moves, letting go lifts one stretch with weight', () => {
     setConfig('MAR_LAG_MS', 0)
     setConfig('BANK_RESISTANCE', 0)
     const { camera, physics } = inRegion('cordillera')
@@ -203,36 +203,55 @@ describe('physics per region', () => {
     physics.drag(200, 400, 40, 0, 16, 16)
     const sideways = Math.abs(camera.x - x0)
     const y0 = camera.y
-    physics.drag(200, 400, 0, 40, 16, 32) // finger down: the world is pulled up
-    const up = Math.abs(camera.y - y0)
-    expect(up).toBeLessThan(sideways * 0.6)
-    physics.touchEnd(48)
+    physics.drag(200, 400, 0, 40, 16, 32) // finger down: pulling up
+    const tension = Math.abs(camera.y - y0)
+    expect(tension).toBeLessThan(sideways * 0.3)
+    physics.drag(200, 440, 0, 40, 16, 48)
+    physics.touchEnd(64)
     expect(camera.vx).toBe(0)
     expect(camera.vy).toBe(0)
-    const y1 = camera.y
-    physics.step(16, 64, null)
-    expect(camera.y).toBe(y1)
+    const before = camera.y
+    let t = 64
+    for (let i = 0; i < 200; i++) {
+      t += 16
+      if (!physics.step(16, t, null)) break
+    }
+    const rise = before - camera.y
+    expect(rise).toBeGreaterThan(config.CORDILLERA_RUNG_SCREENS * camera.viewH * 0.95)
+    expect(rise).toBeLessThanOrEqual(config.CORDILLERA_RUNG_SCREENS * camera.viewH + 1)
+    // A short pull lifts nothing.
+    physics.touchStart(10_000)
+    physics.drag(200, 400, 0, 20, 16, 10_016)
+    physics.touchEnd(10_032)
+    const y2 = camera.y
+    physics.step(16, 10_048, null)
+    expect(camera.y).toBe(y2)
   })
 
-  it('Cordillera: pulling up without pause tires, rest recovers', () => {
+  it('Cordillera: stretches without rest shorten, rest recovers', () => {
     setConfig('MAR_LAG_MS', 0)
     const { camera, physics } = inRegion('cordillera')
-    physics.touchStart(0)
-    const pull = () => {
+    let clock = 0
+    const climb = (t0: number) => {
+      physics.touchStart(t0)
+      physics.drag(200, 400, 0, 80, 16, t0 + 16)
+      physics.touchEnd(t0 + 32)
       const y = camera.y
-      physics.drag(200, 400, 0, 20, 16, 0)
-      return Math.abs(camera.y - y)
+      let t = t0 + 32
+      for (let i = 0; i < 200; i++) {
+        t += 16
+        if (!physics.step(16, t, null)) break
+      }
+      clock = t
+      return y - camera.y
     }
-    const fresh = pull()
-    for (let i = 0; i < 80; i++) pull()
-    const tired = pull()
-    expect(physics.fatigue).toBeGreaterThan(0.8)
-    expect(tired).toBeLessThan(fresh * 0.4)
-    physics.touchEnd(0)
-    for (let t = 0; t < 4000; t += 16) physics.step(16, t, null)
-    expect(physics.fatigue).toBe(0)
-    physics.touchStart(5000)
-    expect(pull()).toBeCloseTo(fresh, 3)
+    const fresh = climb(0)
+    climb(clock + 50)
+    climb(clock + 50)
+    const tired = climb(clock + 50)
+    expect(tired).toBeLessThan(fresh * 0.7)
+    const rested = climb(clock + 5000)
+    expect(rested).toBeCloseTo(fresh, 0)
   })
 
   it('Cielo: little traction, a flick sustains a drift that slows to a minimum and only a touch stops', () => {

@@ -43,7 +43,9 @@ export function placePlaces(input: GeographyInput): Place[] {
   // (the start sits half a screen above the region's bottom), the last
   // near the top. The exit (22) always takes the very top.
   const bottomSlot = rect.y + rect.h - viewH / 2 - config.FIRST_PLACE_SCREENS * viewH
-  const topSlot = inner.y + short * 0.15
+  // The last place of a region stays at least a screen below the closing at its threshold;
+  // the exit (22) has no threshold above it and takes the very top.
+  const topSlot = inner.y + (fragments.some((f) => f.n === 22) ? short * 0.15 : Math.max(short * 0.15, viewH * 1.05 - margin))
   const span = Math.max(0, bottomSlot - topSlot)
   const step = count > 1 ? span / (count - 1) : 0
   let side = random() < 0.5 ? -1 : 1
