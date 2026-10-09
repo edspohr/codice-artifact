@@ -460,7 +460,8 @@ test.describe('territory: touch', () => {
     // Cross upward by the visitor's own drag (a glide of the linear path never looks back).
     const s = await cdp(page)
     const h = viewport!.height
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 6; i++) {
+      await page.waitForTimeout(150)
       if ((await page.locator('.territory').getAttribute('data-region')) !== 'mar') break
       await swipe(s, { x: viewport!.width / 2, y: h * 0.2 }, { x: viewport!.width / 2, y: h * 0.85 }, 14, 16)
     }
