@@ -149,14 +149,14 @@ const grounds = {
   mar(u, v, seed, px, py) {
     const side = Math.abs(u - 0.5) * 2 // 0 centre, 1 edge
     // Readable ascent: the gradient alone must tell which way is up.
-    const gradient = 0.22 + 0.78 * Math.pow(smoothstep(0.0, 1.0, v), 0.85)
+    const gradient = 0.12 + 0.88 * v
     // Banks: the ink thins toward the sides.
     const bank = 1 - 0.5 * smoothstep(0.5, 1.0, side)
     // Soft blotches (wet edges).
     const soft = 0.82 + 0.36 * fbm(u * 2.5 + 3, v * 9, seed + 1, 3, 0.5)
     // Pooled blacks with hard edges, denser low.
     const poolField = fbm(u * 3.2, v * 11, seed + 5, 4, 0.5)
-    const pools = smoothstep(0.52, 0.56, poolField) * smoothstep(0.15, 0.7, v)
+    const pools = smoothstep(0.52, 0.56, poolField) * smoothstep(0.4, 0.95, v)
     // Dry-brush streaks: stretched vertically, hard-thresholded, lighter and darker.
     const streakField = fbm(u * 70, v * 5, seed + 9, 3, 0.62)
     const streakLight = smoothstep(0.3, 0.42, 1 - streakField) * 0.55
@@ -165,7 +165,9 @@ const grounds = {
     const grain = (speckle(px, py, seed + 13) - 0.5) * 0.1
     let d = gradient * bank * soft
     d = d * (1 - streakLight * (1 - v * 0.3)) + streakDark * d
-    d = Math.max(d, pools * 0.98 * bank)
+    // The readable ascent: a monotonic floor the streaks can never wash out.
+    d = Math.max(d, gradient * 0.75 * bank)
+    d = Math.max(d, pools * (0.42 + 0.56 * v) * bank)
     d += grain
     return Math.max(0, Math.min(1, d))
   },
