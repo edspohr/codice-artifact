@@ -34,6 +34,7 @@
     "@vitejs/plugin-react": "^6.1.1",
     "jsdom": "^27.0.0",
     "oxlint": "^1.81.0",
+    "potrace": "^2.1.8",
     "sharp": "^0.34.3",
     "typescript": "~6.0.2",
     "vite": "^8.3.0",
