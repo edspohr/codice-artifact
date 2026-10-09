@@ -117,10 +117,25 @@ export const defaultConfig = {
   MAR_CURRENT_ADOPT: 0.6,
   /** Currents fade this many seconds after the last touch. 0 = never fade. */
   MAR_CURRENT_FADE_S: 0,
-  /** Subtle help: bias of the current (and of the ink's grain) toward the nearest unfound place. 0 disables. */
-  MAR_HELP_BIAS: 0.45,
-  /** Current multiplier inside the threshold band. */
-  THRESHOLD_CURRENT_MULT: 2,
+  /** Passive help: bias of the current (and of the ink's grain) toward the nearest unfound place at rest. 0 disables. */
+  MAR_HELP_BIAS: 0.08,
+  /** Active help: holding the finger still on the ground gathers the grain toward the nearest unfound place. */
+  MAR_HELP_ACTIVE_BIAS: 0.9,
+  /** Hold this long without moving more than the tolerance to invoke it (ms, px). */
+  HOLD_HELP_MS: 450,
+  HOLD_TOLERANCE_PX: 10,
+  /** The help rises while held and falls after release (ms). */
+  HELP_RISE_MS: 900,
+  HELP_FALL_MS: 1400,
+  /** Extra grain contrast while the help is invoked. */
+  GRAIN_HELP_BOOST: 0.35,
+  /** The threshold is a colossus: the current at full expression, less traction, a mass of ink to cross. */
+  THRESHOLD_CURRENT_MULT: 3,
+  THRESHOLD_TRACTION: 0.5,
+  THRESHOLD_MASS: 0.85,
+  /** Crossing a threshold upward for the first time: a brief look back down the channel (zoom, ms). 0 disables. */
+  LOOKBACK_ZOOM: 0.42,
+  LOOKBACK_MS: 3200,
   /** The camera may overshoot the world edge by this many px (0 = hard edge). */
   CAMERA_EDGE_SOFT: 0,
   /** Threshold band height (screens). */
@@ -146,6 +161,13 @@ export const defaultConfig = {
   FURROW_STRENGTH: 0.5,
   /** Grain of the ink running up the channel, bent by the help bias. 0 disables. */
   GRAIN_STRENGTH: 0.16,
+  /** The cost of finding: a stamp scars the ground around the place (strength, radius × short, width × short). */
+  SCAR_STRENGTH: 0.4,
+  SCAR_RADIUS: 0.85,
+  SCAR_WIDTH: 0.12,
+  /** Dirty hands: after each stamp the finger deposits more ink and the accent comes sooner. */
+  DIRT_PER_STAMP: 0.08,
+  DIRT_ACCENT: 0.5,
 
   // --- clearing under text (the ink parts around it) ---
   /** Margin around a text block (× short), softness (× short) and edge irregularity (0..1). */

@@ -50,6 +50,29 @@ void main() {
 }
 `
 
+/** The cost of finding: a jagged ring of broken ink around a stamped place, baked into a texture (R = ink). */
+export const SCAR_FRAG = `
+precision mediump float;
+varying vec2 vUv;
+uniform sampler2D uBase;
+uniform sampler2D uNoise;
+uniform vec4 uWorld;
+uniform vec4 uScar;      // x, y, radius, width (world px)
+uniform float uStrength;
+uniform float uNoiseScale;
+void main() {
+  vec4 base = texture2D(uBase, vUv);
+  vec2 p = uWorld.xy + vUv * uWorld.zw;
+  vec4 n = texture2D(uNoise, p / uNoiseScale);
+  float r = uScar.z * (0.8 + 0.5 * n.g);
+  float dist = length(p - uScar.xy);
+  float ring = exp(-pow((dist - r) / max(1.0, uScar.w), 2.0));
+  float broken = step(0.42, n.r) * (0.4 + 0.6 * n.b);
+  float d = clamp(base.r + ring * broken * uStrength, 0.0, 1.0);
+  gl_FragColor = vec4(d, base.gba);
+}
+`
+
 /**
  * Velocity + insistence. RG = velocity encoded around 0.5 (texels/s over
  * uVelMax), B = insistence. The brush is the finger's slip segment.
@@ -115,6 +138,7 @@ uniform float uBrushOn;
 uniform vec4 uBrush;        // segment a.xy b.xy in texels
 uniform float uBrushRadius; // texels
 uniform float uFurrow;
+uniform float uDeposit;     // dirty hands: ink left under the finger
 
 float segDist(vec2 p, vec2 a, vec2 b) {
   vec2 ab = b - a;
@@ -136,6 +160,7 @@ void main() {
     float furrow = exp(-(dist * dist) / (r * r * 0.45));
     float ring = exp(-pow((dist - 1.25 * r) / (0.55 * r), 2.0));
     d += uFurrow * (ring * 0.35 * g - furrow * 0.5 * d);
+    d += uDeposit * furrow;
   }
   d = mix(d, g, 1.0 - exp(-uDryRate * uDt));
   gl_FragColor = vec4(clamp(d, 0.0, 1.0), 0.0, 0.0, 1.0);
@@ -170,6 +195,7 @@ uniform float uNoiseScale; // world px per noise tile
 uniform vec4 uHelp;        // target x, y, bias, active
 uniform vec3 uGrain;       // strength, wiggle, wavelength (px)
 uniform float uShort;
+uniform vec4 uBand;        // threshold band: y, height, mass, enabled
 
 float formation(sampler2D img, vec4 place, vec2 p) {
   if (place.w <= 0.001) return 0.0;
@@ -189,6 +215,15 @@ void main() {
   float g = texture2D(uGround, uv).r;
   float ins = texture2D(uVI, uv).b;
 
+  // The threshold as a colossus: a mass of ink at full expression across the band.
+  if (uBand.w > 0.5) {
+    float edge = uBand.y * 0.35;
+    float inBand = smoothstep(uBand.x - edge, uBand.x + edge, p.y) * (1.0 - smoothstep(uBand.x + uBand.y - edge, uBand.x + uBand.y + edge, p.y));
+    float mass = uBand.z * (0.7 + 0.3 * n.r) * inBand;
+    d = max(d, mass);
+    g = max(g, mass);
+  }
+
   // The grain of the ink runs up the channel and bends, faintly, toward the
   // nearest unfound place: the same direction as the current.
   if (uGrain.x > 0.0) {
@@ -200,7 +235,7 @@ void main() {
     }
     dir = normalize(dir);
     vec2 perp = vec2(-dir.y, dir.x);
-    vec2 q = vec2(dot(p, perp) / (uShort * 0.022), dot(p, dir) / (uShort * 0.55));
+    vec2 q = vec2(dot(p, perp) / (uShort * 0.022), dot(p, dir) / (uShort * 0.14));
     float streak = texture2D(uNoise, q / 64.0).a;
     d = clamp(d + (streak - 0.5) * uGrain.x * d, 0.0, 1.0);
   }
@@ -234,6 +269,11 @@ void main() {
   vec3 color = mix(uPaper, uInk, d);
   color = mix(color, uAccentColor, accent * (0.35 + 0.65 * d));
   color = mix(uPaper, color, uOpen);
+  // Beyond the field (only visible while looking back): paper, with a soft edge.
+  float edgeW = 40.0 / uWorld.z;
+  float inside = smoothstep(-edgeW, 0.0, uv.x) * (1.0 - smoothstep(1.0, 1.0 + edgeW, uv.x))
+               * smoothstep(-edgeW, 0.0, uv.y) * (1.0 - smoothstep(1.0, 1.0 + edgeW, uv.y));
+  color = mix(uPaper, color, inside);
   gl_FragColor = vec4(color, 1.0);
 }
 `

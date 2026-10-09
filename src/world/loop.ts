@@ -73,6 +73,17 @@ export class Territory {
   private departAccum = 0
   /** The stamp lands with a short dip of the viewpoint. */
   private dipStart = -Infinity
+  // Active help: holding the finger still gathers the grain toward the nearest unfound place.
+  private holdStart: number | null = null
+  private holdMoved = 0
+  private help = 0 // 0..1, rises while invoked, falls after
+  // The cost of finding.
+  private dirt = 0
+  // The look back: a brief pull-back when a threshold is first crossed upward.
+  private lookback: { start: number; k: number } | null = null
+  private lookedBack = new Set<string>()
+  private zoom = 1
+  private pendingTitle: MovementId | null = null
 
   constructor(els: TerritoryElements, opts: TerritoryOptions) {
     this.els = els
@@ -186,6 +197,8 @@ export class Territory {
     this.sound.unlock()
     if (phase === 'epigraph') this.openTerritory(now)
     this.departAccum = 0
+    this.holdStart = now
+    this.holdMoved = 0
     if (!this.resting) this.physics.touchStart(now)
     this.lastDragT = s.t
     this.sound.noteOn(this.height())
@@ -194,6 +207,9 @@ export class Territory {
 
   private onMove(s: DragSample, prev: DragSample) {
     if (territoryStore.get().phase === 'cover') return
+    if (this.lookback) return
+    this.holdMoved += Math.hypot(s.x - prev.x, s.y - prev.y)
+    if (this.holdMoved > config.HOLD_TOLERANCE_PX) this.holdStart = null
     const dt = Math.max(1, s.t - prev.t)
     if (this.resting) {
       // At a place the world is still: a stray touch does not move it. A deliberate drag does.
@@ -217,6 +233,7 @@ export class Territory {
 
   private onEnd() {
     if (territoryStore.get().phase === 'cover') return
+    this.holdStart = null
     if (!this.resting) this.physics.touchEnd(performance.now())
     this.sound.noteOff()
     this.wake()
@@ -241,6 +258,9 @@ export class Territory {
     this.sound.stamp(this.height())
     this.dipStart = performance.now()
     this.ink.bake(place, config.FORMATION_RADIUS * this.world.short)
+    // The cost of finding: the ground scars around the place, the hands get dirtier.
+    if (config.SCAR_STRENGTH > 0) this.ink.scar(place)
+    this.dirt += 1
     this.onStampCb?.(place)
     // The current deposits the visitor: come to rest with the whole text block and the seal in view.
     // Not while a glide is in flight: the linear path settles at its own destination.
@@ -423,21 +443,61 @@ export class Territory {
           g.onDone?.()
         } else active = true
       }
-    } else if (this.resting) {
-      // Stillness at the place: nothing moves until a deliberate drag.
+    } else if (this.resting || this.lookback) {
+      // Stillness at the place, or the look back: nothing moves until a deliberate drag.
     } else if (this.input.down) {
       active = true
     } else {
-      const nearest = config.MAR_HELP_BIAS > 0 ? this.places.nearestUnfound({ x: this.camera.x, y: this.camera.y }) : null
+      const nearest = this.physics.helpBias > 0 ? this.places.nearestUnfound({ x: this.camera.x, y: this.camera.y }) : null
       if (this.physics.step(dt, now, nearest)) active = true
     }
 
-    // Region (stub above the threshold). Entering a region is a title event.
+    // Active help: hold the finger still to gather the grain toward the nearest unfound place.
+    const invoked = this.holdStart !== null && this.input.down && now - this.holdStart >= config.HOLD_HELP_MS
+    const helpTarget = invoked ? 1 : 0
+    const helpRate = dt / Math.max(1, invoked ? config.HELP_RISE_MS : config.HELP_FALL_MS)
+    const prevHelp = this.help
+    this.help = helpTarget > this.help ? Math.min(1, this.help + helpRate) : Math.max(0, this.help - helpRate)
+    if (this.help !== prevHelp || this.holdStart !== null) active = true
+    this.physics.helpBias = config.MAR_HELP_BIAS + (config.MAR_HELP_ACTIVE_BIAS - config.MAR_HELP_BIAS) * this.help
+
+    // Region (stub above the threshold). Entering a region is a title event; crossing a
+    // threshold upward for the first time is a look back down the channel.
     const mar = this.world.regions[0]?.rect
     const region = mar && this.camera.y < mar.y ? 'stub' : 'mar'
     if (territoryStore.get().region !== region) {
       territoryStore.patch({ region })
-      if (region === 'stub') this.showTitle('tierra', now)
+      if (region === 'stub') {
+        if (!this.lookedBack.has('mar') && config.LOOKBACK_ZOOM > 0 && config.LOOKBACK_MS > 0 && !session.get().reducedMotion) {
+          this.lookedBack.add('mar')
+          this.lookback = { start: now, k: 0 }
+          this.camera.vx = 0
+          this.camera.vy = 0
+          // The next region's title waits for the look back to end.
+          this.pendingTitle = 'tierra'
+        } else {
+          this.showTitle('tierra', now)
+        }
+      }
+    }
+
+    // The look back: zoom out over the channel just crossed, hold, zoom in. Nothing else moves meanwhile.
+    if (this.lookback) {
+      const t = (now - this.lookback.start) / Math.max(1, config.LOOKBACK_MS)
+      if (t >= 1) {
+        this.lookback = null
+        this.zoom = 1
+        if (this.pendingTitle) {
+          this.showTitle(this.pendingTitle, now)
+          this.pendingTitle = null
+        }
+      } else {
+        const ease = (x: number) => 1 - Math.pow(1 - x, 3)
+        const k = t < 0.28 ? ease(t / 0.28) : t > 0.72 ? 1 - ease((t - 0.72) / 0.28) : 1
+        this.zoom = 1 + (config.LOOKBACK_ZOOM - 1) * k
+        this.lookback.k = k
+        active = true
+      }
     }
 
     if (now - this.dipStart < config.STAMP_DIP_MS + 50) active = true
@@ -456,7 +516,7 @@ export class Territory {
     if (brush && this.open <= 0 && !this.opening) {
       // The first mark before the white opens still lands in the field.
     }
-    this.ink.step(dt / 1000, brush)
+    this.ink.step(dt / 1000, brush, this.dirt)
     if (brush || now - this.lastDragT < 1500) active = true
 
     // Sway from camera velocity (text as matter in Mar).
@@ -495,10 +555,28 @@ export class Territory {
     return Math.sin(t * Math.PI) * config.STAMP_DIP_PX
   }
 
+  /** The viewpoint's centre, shifted down the channel while looking back (the band near the top of the view). */
+  private viewCentre(): Vec2 {
+    const lb = this.lookback
+    const band = this.world.thresholds[0]?.band
+    if (!lb || !band || this.zoom >= 1) return { x: this.camera.x, y: this.camera.y }
+    const visibleH = this.camera.viewH / this.zoom
+    const lookY = band.y - band.h * 0.5 + visibleH * 0.5 - this.camera.viewH * 0.12
+    return { x: this.camera.x, y: this.camera.y + (lookY - this.camera.y) * lb.k }
+  }
+
   private syncDom() {
     const layer = this.els.textLayer
     const dip = this.dip(performance.now())
-    layer.style.transform = `translate3d(${(-this.camera.left).toFixed(2)}px, ${(-(this.camera.top + dip)).toFixed(2)}px, 0)`
+    const z = this.zoom
+    if (z === 1) {
+      layer.style.transform = `translate3d(${(-this.camera.left).toFixed(2)}px, ${(-(this.camera.top + dip)).toFixed(2)}px, 0)`
+    } else {
+      const c = this.viewCentre()
+      const cx = this.camera.viewW / 2
+      const cy = this.camera.viewH / 2
+      layer.style.transform = `translate(${cx}px, ${cy}px) scale(${z.toFixed(4)}) translate(${(-c.x).toFixed(2)}px, ${(-(c.y + dip)).toFixed(2)}px)`
+    }
     const reduced = session.get().reducedMotion
     layer.style.setProperty('--sway-x', reduced ? '0px' : `${this.sway.x.toFixed(2)}px`)
     layer.style.setProperty('--sway-r', reduced ? '0deg' : `${this.sway.r.toFixed(3)}deg`)
@@ -511,16 +589,41 @@ export class Territory {
       const s = this.places.get(p.n)
       return { x: p.x, y: p.y, radius: config.FORMATION_RADIUS * this.world.short, reveal: s.found ? 0 : s.reveal }
     })
-    const help = config.MAR_HELP_BIAS > 0 ? this.places.nearestUnfound({ x: this.camera.x, y: this.camera.y }) : null
+    const bias = this.physics.helpBias
+    const nearest = bias > 0 ? this.places.nearestUnfound({ x: this.camera.x, y: this.camera.y }) : null
+    const help = nearest ? { x: nearest.x, y: nearest.y, bias, boost: config.GRAIN_HELP_BOOST * this.help } : null
     const now = performance.now()
     if (now - this.dipStart < config.STAMP_DIP_MS + 50) this.wake()
+    const z = this.zoom
+    const w = this.camera.viewW / z
+    const h = this.camera.viewH / z
+    const c = this.viewCentre()
     this.ink.render(
-      { x: this.camera.left, y: this.camera.top + this.dip(now), w: this.camera.viewW, h: this.camera.viewH },
+      { x: c.x - w / 2, y: c.y + this.dip(now) - h / 2, w, h },
       this.revealAll && this.open <= 0 ? 1 : this.open,
       placeUniforms,
       this.clears,
       help,
     )
+  }
+
+  /** Dev/test: strength of the invoked help (0..1). */
+  helpStrength() {
+    return this.help
+  }
+
+  /** Dev/test: stamps so far (dirty hands). */
+  dirtLevel() {
+    return this.dirt
+  }
+
+  /** Dev/test: whether the look back is playing, and the current zoom. */
+  isLookingBack() {
+    return this.lookback !== null
+  }
+
+  currentZoom() {
+    return this.zoom
   }
 
   /** Dev/test: whether the viewpoint is at rest at a place. */

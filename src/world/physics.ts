@@ -21,6 +21,8 @@ export class MarPhysics {
   private touching = false
   private world: World
   private camera: Camera
+  /** Effective help bias (0..1): the passive bias at rest, the active one while the help is invoked. */
+  helpBias = config.MAR_HELP_BIAS
 
   constructor(world: World, camera: Camera) {
     this.world = world
@@ -42,9 +44,11 @@ export class MarPhysics {
     // Target world velocity: the world moves opposite to the finger, scaled by traction.
     const safeDt = Math.max(1, dt)
     // Banks: lateral traction fades toward the edges of the channel.
-    const lateralTraction = config.MAR_TRACTION * (1 - config.BANK_RESISTANCE * this.bankFactor(this.camera.x))
+    // The threshold: a mass of ink with less traction, crossed by the current.
+    const inBand = this.inThreshold(this.camera.y) ? config.THRESHOLD_TRACTION / Math.max(0.01, config.MAR_TRACTION) : 1
+    const lateralTraction = config.MAR_TRACTION * inBand * (1 - config.BANK_RESISTANCE * this.bankFactor(this.camera.x))
     const targetVx = (-fdx * lateralTraction) / safeDt
-    const targetVy = (-fdy * config.MAR_TRACTION) / safeDt
+    const targetVy = (-fdy * config.MAR_TRACTION * inBand) / safeDt
     const lag = Math.max(0, config.MAR_LAG_MS)
     const k = lag > 0 ? 1 - Math.exp(-safeDt / lag) : 1
     this.camera.vx += (targetVx - this.camera.vx) * k
@@ -100,13 +104,17 @@ export class MarPhysics {
     return Math.max(0, Math.min(1, (u - start) / (1 - start)))
   }
 
+  inThreshold(y: number): boolean {
+    return this.world.thresholds.some((th) => y >= th.band.y && y <= th.band.y + th.band.h)
+  }
+
   /** Direction of the current (unit vector): up the channel, wiggling, bent toward the nearest unfound place. */
   currentDirection(x: number, y: number, nearestUnfound: Vec2 | null): Vec2 {
     const scale = Math.max(50, config.MAR_CURRENT_SCALE)
     const wiggle = config.MAR_CURRENT_WIGGLE * Math.sin((y / scale) * 2.1 + 0.7 + Math.cos((x / scale) * 1.3))
     let cx = wiggle
     let cy = -1
-    const bias = config.MAR_HELP_BIAS
+    const bias = this.helpBias
     if (bias > 0 && nearestUnfound) {
       const dx = nearestUnfound.x - x
       const dy = nearestUnfound.y - y

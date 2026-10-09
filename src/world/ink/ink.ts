@@ -5,7 +5,7 @@ import { config } from '../../gestures/config'
 import type { Place, Rect, World } from '../types'
 import { bindTexture, createProgram, createQuad, createTarget, createTexture, drawQuad, PingPong, type Program, type Target } from './gl'
 import { NOISE_SIZE, noiseTextureData } from './noise'
-import { ADVECT_FRAG, BAKE_FRAG, COMPOSITE_FRAG, GROUND_FRAG, VEL_FRAG, VERT } from './shaders'
+import { ADVECT_FRAG, BAKE_FRAG, COMPOSITE_FRAG, GROUND_FRAG, SCAR_FRAG, VEL_FRAG, VERT } from './shaders'
 
 const VEL_MAX = 900 // texels per second, the encoding range of the velocity texture
 
@@ -39,6 +39,7 @@ export class Ink {
   private quad: WebGLBuffer
   private progGround: Program
   private progBake: Program
+  private progScar: Program
   private progVel: Program
   private progAdvect: Program
   private progComposite: Program
@@ -69,16 +70,17 @@ export class Ink {
     this.quad = createQuad(gl)
     this.progGround = createProgram(gl, VERT, GROUND_FRAG, ['uImage', 'uWorld', 'uRegion'])
     this.progBake = createProgram(gl, VERT, BAKE_FRAG, ['uBase', 'uImage', 'uWorld', 'uPlace'])
+    this.progScar = createProgram(gl, VERT, SCAR_FRAG, ['uBase', 'uNoise', 'uWorld', 'uScar', 'uStrength', 'uNoiseScale'])
     this.progVel = createProgram(gl, VERT, VEL_FRAG, [
       'uVI', 'uSim', 'uDt', 'uVelDecay', 'uVelMax', 'uBrushOn', 'uBrush', 'uBrushVel', 'uBrushRadius', 'uBrushStrength', 'uInsRate', 'uInsDecay',
     ])
     this.progAdvect = createProgram(gl, VERT, ADVECT_FRAG, [
-      'uDensity', 'uVI', 'uGround', 'uSim', 'uDt', 'uVelMax', 'uDryRate', 'uBrushOn', 'uBrush', 'uBrushRadius', 'uFurrow',
+      'uDensity', 'uVI', 'uGround', 'uSim', 'uDt', 'uVelMax', 'uDryRate', 'uBrushOn', 'uBrush', 'uBrushRadius', 'uFurrow', 'uDeposit',
     ])
     this.progComposite = createProgram(gl, VERT, COMPOSITE_FRAG, [
       'uDensity', 'uGround', 'uVI', 'uNoise', 'uForm0', 'uForm1', 'uForm2', 'uForm3',
       'uPlace[0]', 'uView', 'uWorld', 'uOpen', 'uPaper', 'uInk', 'uAccentColor', 'uAccent',
-      'uClear[0]', 'uClearCount', 'uClearParams', 'uClearResidual', 'uNoiseScale', 'uHelp', 'uGrain', 'uShort',
+      'uClear[0]', 'uClearCount', 'uClearParams', 'uClearResidual', 'uNoiseScale', 'uHelp', 'uGrain', 'uShort', 'uBand',
     ])
     this.noise = createTexture(gl, NOISE_SIZE, NOISE_SIZE, noiseTextureData(), gl.REPEAT)
     this.groundImg = createTexture(gl, 0, 0, assets.ground)
@@ -151,11 +153,30 @@ export class Ink {
     }
   }
 
+  /** The cost of finding: scar the ground (and the current ink) around a stamped place. */
+  scar(place: Place) {
+    const gl = this.gl
+    const short = this.world.short
+    for (const pp of [this.ground, this.density]) {
+      this.target(pp.write)
+      gl.useProgram(this.progScar.program)
+      bindTexture(gl, 0, pp.read.tex, this.progScar.uniforms.uBase ?? null)
+      bindTexture(gl, 1, this.noise, this.progScar.uniforms.uNoise ?? null)
+      gl.uniform4f(this.progScar.uniforms.uWorld ?? null, ...this.worldVec())
+      gl.uniform4f(this.progScar.uniforms.uScar ?? null, place.x, place.y, config.SCAR_RADIUS * short, config.SCAR_WIDTH * short)
+      gl.uniform1f(this.progScar.uniforms.uStrength ?? null, config.SCAR_STRENGTH)
+      gl.uniform1f(this.progScar.uniforms.uNoiseScale ?? null, short * 0.5)
+      drawQuad(gl, this.quad, this.progScar.attrib)
+      pp.swap()
+    }
+  }
+
   /**
    * One simulation step. `brush` is the finger's slip segment in world px
    * with its velocity in world px/s, or null when nothing is touching.
+   * `dirt` is the number of stamps so far: dirty hands deposit more ink.
    */
-  step(dtSeconds: number, brush: { ax: number; ay: number; bx: number; by: number; vx: number; vy: number } | null) {
+  step(dtSeconds: number, brush: { ax: number; ay: number; bx: number; by: number; vx: number; vy: number } | null, dirt = 0) {
     const gl = this.gl
     const dt = Math.min(0.05, Math.max(0.0005, dtSeconds))
     const sx = this.simW / this.world.width
@@ -179,7 +200,7 @@ export class Ink {
     }
     gl.uniform1f(u.uBrushRadius ?? null, config.BRUSH_RADIUS * this.world.short * sx)
     gl.uniform1f(u.uBrushStrength ?? null, config.BRUSH_STRENGTH)
-    gl.uniform1f(u.uInsRate ?? null, config.INSISTENCE_RATE)
+    gl.uniform1f(u.uInsRate ?? null, config.INSISTENCE_RATE * (1 + config.DIRT_ACCENT * dirt))
     gl.uniform1f(u.uInsDecay ?? null, config.INSISTENCE_DECAY)
     drawQuad(gl, this.quad, this.progVel.attrib)
     this.vi.swap()
@@ -199,12 +220,16 @@ export class Ink {
     else gl.uniform4f(a.uBrush ?? null, 0, 0, 0, 0)
     gl.uniform1f(a.uBrushRadius ?? null, config.BRUSH_RADIUS * this.world.short * sx)
     gl.uniform1f(a.uFurrow ?? null, config.FURROW_STRENGTH)
+    gl.uniform1f(a.uDeposit ?? null, Math.min(0.6, config.DIRT_PER_STAMP * dirt))
     drawQuad(gl, this.quad, this.progAdvect.attrib)
     this.density.swap()
   }
 
-  /** Draw the viewport. `view` is the camera rect in world px. `help` is the nearest unfound place, if any. */
-  render(view: Rect, open: number, places: PlaceUniform[], clears: ClearBox[], help: { x: number; y: number } | null) {
+  /**
+   * Draw the viewport. `view` is the camera rect in world px. `help` is the
+   * nearest unfound place with the effective bias and the grain boost.
+   */
+  render(view: Rect, open: number, places: PlaceUniform[], clears: ClearBox[], help: { x: number; y: number; bias: number; boost: number } | null) {
     const gl = this.gl
     const canvas = this.canvas
     gl.bindFramebuffer(gl.FRAMEBUFFER, null)
@@ -247,9 +272,11 @@ export class Ink {
     gl.uniform3f(u.uClearParams ?? null, config.CLEAR_MARGIN * short, config.CLEAR_SOFT * short, config.CLEAR_IRREGULARITY)
     gl.uniform1f(u.uClearResidual ?? null, config.CLEAR_RESIDUAL)
     gl.uniform1f(u.uNoiseScale ?? null, short * 0.9)
-    gl.uniform4f(u.uHelp ?? null, help ? help.x : 0, help ? help.y : 0, config.MAR_HELP_BIAS, help ? 1 : 0)
-    gl.uniform3f(u.uGrain ?? null, config.GRAIN_STRENGTH, config.MAR_CURRENT_WIGGLE, Math.max(50, config.MAR_CURRENT_SCALE))
+    gl.uniform4f(u.uHelp ?? null, help ? help.x : 0, help ? help.y : 0, help ? help.bias : 0, help ? 1 : 0)
+    gl.uniform3f(u.uGrain ?? null, config.GRAIN_STRENGTH + (help ? help.boost : 0), config.MAR_CURRENT_WIGGLE, Math.max(50, config.MAR_CURRENT_SCALE))
     gl.uniform1f(u.uShort ?? null, short)
+    const band = this.world.thresholds[0]?.band
+    gl.uniform4f(u.uBand ?? null, band ? band.y : 0, band ? band.h : 1, config.THRESHOLD_MASS, band && config.THRESHOLD_MASS > 0 ? 1 : 0)
     drawQuad(gl, this.quad, this.progComposite.attrib)
   }
 
