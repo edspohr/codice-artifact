@@ -58,6 +58,7 @@ The four gestures of the old concept become four ways of moving. **Starting hypo
 
 - A fragment is a location in its region, **hidden** until the visitor comes near. On approach the text emerges (its ink gathers); the transition is brief and resolves to fully legible. At rest a fragment is either absent or fully legible, never half-shown.
 - On arrival **the seal is stamped**: it was not there before. One stamp, with weight (visual impact; a short vibration where the device supports it; a note if sound is on). Stamped seals persist for the session.
+- **Finding has a cost.** A stamp scars the ground around the place, and the visitor's hands get dirtier: after each stamp the finger leaves more ink and the accent comes sooner. Progress is also loss.
 - Each place has its own local ink formation (its lámina) blended into the ground, with no edges.
 - **The text reacts as matter, by region and always legible:** in Mar it sways with the current; in Tierra the block shears along the cracks the visitor makes; in Cordillera it settles with weight; in Cielo its ink thins (never below the contrast floor). Text reactions stay within the motion budget below.
 - Order is free inside a region.
@@ -71,6 +72,7 @@ The four gestures of the old concept become four ways of moving. **Starting hypo
 - Regions are crossed in order. The passage up to the next region is a **threshold** at the top of each region, crossed with that region's own physics at full expression. Entering a region shows its **movement title** over the ground (typography per spec §5.1).
 - **The title is an event, not an object.** It appears alone on entering the region and dissolves before any place can emerge. A title and a fragment are never on screen together.
 - **The closing of a region is an object.** At the threshold, anchored to the world, the region's title with the tally beneath it: the summary of what was done, and the passage. The ink parts around it.
+- **The threshold is a colossus.** A mass of ink at full expression across the band, crossed with the region's physics at their strongest (in Mar: the current at its fastest, less traction). Crossing a threshold upward for the first time, the viewpoint briefly looks back down the channel and returns. That is the only pulled-back view in the piece: never forward, never a map.
 - A threshold is **always passable**: the journey never requires completeness.
 - **The tally** is the only indication of progress in the whole piece. At each threshold there is one seal impression per fragment of the region being left: **inked with its numeral if the visitor found it, blind (embossed, uninked, no numeral) if not.** No numbers, no words, no bar. A visitor who wants everything sees what is missing and goes back; anyone else walks on.
 
@@ -94,7 +96,7 @@ The four gestures of the old concept become four ways of moving. **Starting hypo
 
 ### 3.9 Subtle help
 
-Demanding, with subtle help, and never in words. The current and the grain of the ink bend toward the nearest unfound place (the help bias): strong enough to be felt and visible in the grain itself, never a pointer. When a visitor has found nothing for a long while (and especially in a virgin cycle, when there are no trails), the lean grows. Tunable; zero disables it.
+Demanding, with subtle help, and never in words. **Help is invoked, not given:** holding the finger still on the ground gathers the grain of the ink and bends the current toward the nearest unfound place; letting go dispels it. At rest the lean is faint, almost nothing. Never a pointer, never a word. When a visitor has found nothing for a long while (and especially in a virgin cycle, when there are no trails), the faint lean may grow. Tunable; zero disables it.
 
 ### 3.10 Motion grammar
 
@@ -102,8 +104,8 @@ The piece mixes the mechanics of a game with the pacing of film, through movemen
 
 - Cover stamped → dissolves. Epigraph alone → the first mark opens the white.
 - Entering a region: its title as an event, alone, then gone.
-- Between places: drag, inertia, current. At a place: stillness, the arrival sequence (clearing, text, stamp with a short dip), a deliberate drag to leave.
-- Leaving a region: the closing object at the threshold, crossed with the region's physics at full expression.
+- Between places: drag, inertia, current. Holding still: the help gathers. At a place: stillness, the arrival sequence (clearing, text, stamp with a short dip, the scar), a deliberate drag to leave.
+- Leaving a region: the colossus at the threshold, the closing object, the look back.
 - The exit: dwell, stillness, dissolution, reprise, the lone seal.
 - The Burst: witnessed live by everyone, white, alpha.
 
