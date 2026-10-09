@@ -28,7 +28,7 @@ Language rule: code, comments, commits and docs in **English**. Everything a vis
 ### 3.1 Entry
 
 - **The cover.** White. The title of the work in Archivo Light 300, and beneath it the author's real signature (traced once from paper, never a handwriting typeface), stamped onto the paper with an ink impact. A touch dissolves the cover. The cover appears once per visit.
-- **The epigraph** alone on white. The first touch is the first mark (and, if sound is on, the first note); the white opens into the territory at the bottom of Mar.
+- **The epigraph** alone on white, read before it gives way: after a minimum time, a tap or a deliberate drag (never a stray brush) is the first mark (and, if sound is on, the first note); the white opens into the territory at the bottom of Mar.
 
 ### 3.2 The territory
 
@@ -49,10 +49,10 @@ The four gestures of the old concept become four ways of moving. **Starting hypo
 |---|---|---|
 | Mar | drag with long inertia; when you let go, slow currents keep carrying you | fluid, undivided |
 | Tierra | the ground is crusted; fracture lines block the way and yield only to insistence (strokes accumulate, one stroke is never enough) | effort, rupture |
-| Cordillera | drag with heavy resistance and no inertia; going up costs more than going sideways | weight, ascent |
+| Cordillera | climbing by stretches: pulling up meets tension, letting go lifts one stretch with weight; no inertia, no current | weight, ascent |
 | Cielo | touch gives little traction; a light flick sets a direction and stillness sustains the drift, slowing to a minimum but never stopping on its own; touching again stops it | release |
 
-Decided with the author: in Tierra, fracture lines across the channel close the way up; each finger stroke that crosses a line damages it, one stroke never breaks it, a standing line heals slowly, and a broken line stays broken for the session. In Cordillera, pulling up without pause tires (traction falls) and resting recovers, with no indicator.
+Decided with the author: in Tierra, fracture lines across the channel close the way up; each finger stroke that crosses a line damages it, one stroke never breaks it, a standing line heals slowly, and a broken line stays broken for the session. In Tierra, pushing against a standing line also damages it, and no line stands before the region's first place. In Cordillera (revised after the phone walk, the continuous drag was too slow), stretches taken without rest shorten and resting recovers, with no indicator.
 
 **You can go back, but you cannot undo.** Movement is free in every direction, including down into regions already crossed. What the visitor broke stays broken, what they smeared stays smeared, for the session.
 
@@ -66,6 +66,8 @@ Decided with the author: in Tierra, fracture lines across the channel close the 
 - Order is free inside a region.
 - **Movement between places, stillness at them.** On arrival the current deposits the visitor: the world comes to rest with the whole text block inside safe margins and the seal in view. Text is never clipped at rest. Leaving takes a deliberate drag, not a stray touch.
 - **One sequence on arrival and nothing else moving:** the clearing opens, the text settles, the stamp lands.
+- **The text being read always has its clearing**, whatever was found before, and a faint halo of paper around its letters keeps the ink at a distance.
+- An emerged text does not slip away: it disperses only when the viewpoint is clearly gone, and Mar's current calms near it.
 - **A clearing never reads as a card.** No rectangles and no perfect circles anywhere: an irregular, soft-edged void shaped from the text block but not outlining it. Place formations use irregular masks, not radial blobs.
 - **Motion budget.** Outside clearings only the drag and the current move. Text sway is off by default (kept behind an override).
 
@@ -74,7 +76,7 @@ Decided with the author: in Tierra, fracture lines across the channel close the 
 - Regions are crossed in order. The passage up to the next region is a **threshold** at the top of each region, crossed with that region's own physics at full expression. Entering a region shows its **movement title** over the ground (typography per spec §5.1).
 - **The title is an event, not an object.** It appears alone on entering the region and dissolves before any place can emerge. A title and a fragment are never on screen together.
 - **The closing of a region is an object.** At the threshold, anchored to the world, the region's title with the tally beneath it: the summary of what was done, and the passage. The ink parts around it.
-- **The threshold is a colossus.** A mass of ink at full expression across the band, crossed with the region's physics at their strongest (in Mar: the current at its fastest, less traction). Crossing a threshold upward for the first time by the visitor's own movement, the viewpoint briefly looks back down the channel and returns (the linear path's glides do not). That is the only pulled-back view in the piece, and the only moment the DOM text is scaled: never forward, never a map.
+- **The threshold is a colossus.** A mass of ink at full expression across the band, crossed with the region's physics at their strongest (in Mar: the current at its fastest, less traction). There is no pulled-back view anywhere in the piece (the author removed the look back: it broke immersion); the DOM text is never scaled.
 - A threshold is **always passable**: the journey never requires completeness.
 - **The tally** is the only indication of progress in the whole piece. At each threshold there is one seal impression per fragment of the region being left: **inked with its numeral if the visitor found it, blind (embossed, uninked, no numeral) if not.** No numbers, no words, no bar. A visitor who wants everything sees what is missing and goes back; anyone else walks on.
 
@@ -107,7 +109,7 @@ The piece mixes the mechanics of a game with the pacing of film, through movemen
 - Cover stamped → dissolves. Epigraph alone → the first mark opens the white.
 - Entering a region: its title as an event, alone, then gone.
 - Between places: drag, inertia, current. Holding still: the help gathers. At a place: stillness, the arrival sequence (clearing, text, stamp with a short dip, the scar), a deliberate drag to leave.
-- Leaving a region: the colossus at the threshold, the closing object, the look back.
+- Leaving a region: the colossus at the threshold, the closing object.
 - The exit: dwell, stillness, dissolution, reprise, the lone seal.
 - The Burst: witnessed live by everyone, white, alpha.
 
