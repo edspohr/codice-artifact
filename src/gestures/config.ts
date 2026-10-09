@@ -164,6 +164,21 @@ export const defaultConfig = {
   // --- linear accessible path ---
   GLIDE_MS: 900,
 
+  // --- Tierra: the crust ---
+  /** Fracture lines across the channel, per screen of height. */
+  TIERRA_LINES_PER_SCREEN: 0.8,
+  /** A standing line keeps the viewpoint this many screens below it (the line stays in view). */
+  TIERRA_BLOCK_OFFSET: 0.3,
+  /** Damage per crossing of a line, the cap one stroke can deal, healing per second and its grace delay. */
+  TIERRA_DAMAGE_PER_CROSS: 0.15,
+  TIERRA_STROKE_CAP: 0.4,
+  TIERRA_HEAL_PER_S: 0.05,
+  TIERRA_HEAL_DELAY_MS: 800,
+  /** Tierra moves with short inertia and no current. */
+  TIERRA_FRICTION: 0.004,
+  /** Text shears along nearby damaged lines (degrees at full damage). */
+  TIERRA_SHEAR_DEG: 2.5,
+
   // --- the exit (fragment 22) ---
   /** Reading dwell before stillness counts: base margin plus time per canon word (ms). */
   CIELO_DWELL_BASE_MS: 2500,
