@@ -5,10 +5,10 @@ import { session } from '../app/session'
 import type { Territory } from './loop'
 import { territoryStore } from './territoryStore'
 
-export type Stop = { kind: 'epigraph' } | { kind: 'place'; n: number } | { kind: 'threshold'; from: 'mar' } | { kind: 'stub' }
+export type Stop = { kind: 'cover' } | { kind: 'epigraph' } | { kind: 'place'; n: number } | { kind: 'threshold'; from: 'mar' } | { kind: 'stub' }
 
 export function stopsFor(t: Territory): Stop[] {
-  const stops: Stop[] = [{ kind: 'epigraph' }]
+  const stops: Stop[] = [{ kind: 'cover' }, { kind: 'epigraph' }]
   const ordered = [...t.world.places].sort((a, b) => a.n - b.n)
   for (const p of ordered) stops.push({ kind: 'place', n: p.n })
   stops.push({ kind: 'threshold', from: 'mar' })
@@ -43,8 +43,14 @@ export class LinearPath {
     const stop = stops[clamped] as Stop
     const t = this.territory
     switch (stop.kind) {
+      case 'cover':
+        // The cover is only revisited before the territory opens.
+        if (territoryStore.get().phase === 'epigraph') territoryStore.patch({ phase: 'cover' })
+        else t.glideTo(t.world.start, () => t.rest())
+        break
       case 'epigraph':
-        t.glideTo(t.world.start, () => t.rest())
+        if (territoryStore.get().phase === 'cover') t.dismissCover()
+        else t.glideTo(t.world.start, () => t.rest())
         break
       case 'place': {
         const p = t.world.places.find((x) => x.n === stop.n)
@@ -72,12 +78,19 @@ export class LinearPath {
     }
   }
 
+  /** The cover and the epigraph may have been passed by touch: the path never goes back behind the phase. */
+  private current(): number {
+    const phase = territoryStore.get().phase
+    const floor = phase === 'cover' ? 0 : phase === 'epigraph' ? 1 : 1
+    return Math.max(this.index, floor)
+  }
+
   next() {
-    this.go(this.index + 1)
+    this.go(this.current() + 1)
   }
 
   back() {
-    this.go(this.index - 1)
+    this.go(this.current() - 1)
   }
 
   /** Jump to a stop by index without counting as keyboard use (dev). */

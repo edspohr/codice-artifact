@@ -71,6 +71,8 @@ export class Territory {
   private settleTries = 0
   private resting = false
   private departAccum = 0
+  /** The stamp lands with a short dip of the viewpoint. */
+  private dipStart = -Infinity
 
   constructor(els: TerritoryElements, opts: TerritoryOptions) {
     this.els = els
@@ -92,6 +94,7 @@ export class Territory {
       onCancel: () => this.onEnd(),
     })
     window.addEventListener('resize', this.onResize)
+    els.stage.addEventListener('wheel', this.onWheel, { passive: false })
     for (const p of this.world.places) territoryStore.setPlace(this.places.get(p.n))
     territoryStore.patch({ world: this.world, revealAll: this.revealAll })
     this.syncDom()
@@ -99,6 +102,22 @@ export class Territory {
   }
 
   private readonly onResize = () => this.resize()
+
+  /** Desktop: the wheel or trackpad drifts the viewpoint along the channel. No smear without a finger. */
+  private readonly onWheel = (e: WheelEvent) => {
+    e.preventDefault()
+    if (territoryStore.get().phase !== 'territory' || this.glide) return
+    const dy = e.deltaY * config.WHEEL_GAIN
+    if (this.resting) {
+      this.departAccum += Math.abs(dy)
+      if (this.departAccum < config.DEPART_PX) return
+      this.resting = false
+    }
+    this.physics.touchStart(performance.now())
+    this.camera.moveBy(0, dy)
+    this.physics.touchEnd(performance.now())
+    this.wake()
+  }
 
   private resize() {
     const w = this.els.stage.clientWidth || window.innerWidth
@@ -114,6 +133,7 @@ export class Territory {
     this.destroyed = true
     this.input.detach()
     window.removeEventListener('resize', this.onResize)
+    this.els.stage.removeEventListener('wheel', this.onWheel)
     if (this.raf) cancelAnimationFrame(this.raf)
     if (this.idleTimer) clearTimeout(this.idleTimer)
     this.sound.noteOff(true)
@@ -145,12 +165,26 @@ export class Territory {
 
   // --- input ------------------------------------------------------------------
 
+  /** The cover dissolves into the epigraph. */
+  dismissCover() {
+    if (territoryStore.get().phase !== 'cover') return
+    territoryStore.patch({ phase: 'epigraph' })
+    this.wake()
+  }
+
   private onStart(s: DragSample) {
     const now = performance.now()
+    const phase = territoryStore.get().phase
+    if (phase === 'cover') {
+      // A touch on the cover only dissolves it: no mark yet.
+      this.sound.unlock()
+      this.dismissCover()
+      return
+    }
     this.glide = null
     this.pendingSettle = null
     this.sound.unlock()
-    if (territoryStore.get().phase === 'epigraph') this.openTerritory(now)
+    if (phase === 'epigraph') this.openTerritory(now)
     this.departAccum = 0
     if (!this.resting) this.physics.touchStart(now)
     this.lastDragT = s.t
@@ -159,6 +193,7 @@ export class Territory {
   }
 
   private onMove(s: DragSample, prev: DragSample) {
+    if (territoryStore.get().phase === 'cover') return
     const dt = Math.max(1, s.t - prev.t)
     if (this.resting) {
       // At a place the world is still: a stray touch does not move it. A deliberate drag does.
@@ -181,6 +216,7 @@ export class Territory {
   }
 
   private onEnd() {
+    if (territoryStore.get().phase === 'cover') return
     if (!this.resting) this.physics.touchEnd(performance.now())
     this.sound.noteOff()
     this.wake()
@@ -203,6 +239,7 @@ export class Territory {
       }
     }
     this.sound.stamp(this.height())
+    this.dipStart = performance.now()
     this.ink.bake(place, config.FORMATION_RADIUS * this.world.short)
     this.onStampCb?.(place)
     // The current deposits the visitor: come to rest with the whole text block and the seal in view.
@@ -403,6 +440,8 @@ export class Territory {
       if (region === 'stub') this.showTitle('tierra', now)
     }
 
+    if (now - this.dipStart < config.STAMP_DIP_MS + 50) active = true
+
     // Places: nothing emerges while a title is on screen.
     if ((this.open > 0 || this.revealAll) && !this.titleActive) {
       if (this.places.update({ x: this.camera.x, y: this.camera.y }, dt, now, this.revealAll)) active = true
@@ -448,9 +487,18 @@ export class Territory {
     }
   }
 
+  /** Current dip offset in px (down, then back), zero outside the stamp moment or with reduced motion. */
+  private dip(now: number): number {
+    if (session.get().reducedMotion || config.STAMP_DIP_PX <= 0) return 0
+    const t = (now - this.dipStart) / Math.max(1, config.STAMP_DIP_MS)
+    if (t < 0 || t >= 1) return 0
+    return Math.sin(t * Math.PI) * config.STAMP_DIP_PX
+  }
+
   private syncDom() {
     const layer = this.els.textLayer
-    layer.style.transform = `translate3d(${(-this.camera.left).toFixed(2)}px, ${(-this.camera.top).toFixed(2)}px, 0)`
+    const dip = this.dip(performance.now())
+    layer.style.transform = `translate3d(${(-this.camera.left).toFixed(2)}px, ${(-(this.camera.top + dip)).toFixed(2)}px, 0)`
     const reduced = session.get().reducedMotion
     layer.style.setProperty('--sway-x', reduced ? '0px' : `${this.sway.x.toFixed(2)}px`)
     layer.style.setProperty('--sway-r', reduced ? '0deg' : `${this.sway.r.toFixed(3)}deg`)
@@ -464,8 +512,10 @@ export class Territory {
       return { x: p.x, y: p.y, radius: config.FORMATION_RADIUS * this.world.short, reveal: s.found ? 0 : s.reveal }
     })
     const help = config.MAR_HELP_BIAS > 0 ? this.places.nearestUnfound({ x: this.camera.x, y: this.camera.y }) : null
+    const now = performance.now()
+    if (now - this.dipStart < config.STAMP_DIP_MS + 50) this.wake()
     this.ink.render(
-      { x: this.camera.left, y: this.camera.top, w: this.camera.viewW, h: this.camera.viewH },
+      { x: this.camera.left, y: this.camera.top + this.dip(now), w: this.camera.viewW, h: this.camera.viewH },
       this.revealAll && this.open <= 0 ? 1 : this.open,
       placeUniforms,
       this.clears,

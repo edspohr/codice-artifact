@@ -7,12 +7,7 @@ import type { Threshold } from '../world/types'
 // no words.
 export function Tally({ threshold, found }: { threshold: Threshold; found: ReadonlySet<number> }) {
   return (
-    <div
-      className="tally"
-      data-threshold={threshold.from}
-      data-clear
-      style={{ left: `${threshold.band.x + threshold.band.w / 2}px`, top: `${threshold.band.y + threshold.band.h / 2}px` }}
-    >
+    <div className="tally" data-threshold={threshold.from}>
       {threshold.fragments.map((n) => {
         const isFound = found.has(n)
         return (

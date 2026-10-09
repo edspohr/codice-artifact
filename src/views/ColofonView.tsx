@@ -13,6 +13,11 @@ export function ColofonView() {
       <p data-cycle={CURRENT_CYCLE}>{c.cycle.replace('{cycle}', String(CURRENT_CYCLE))}</p>
       <p>{c.contribution}</p>
       <p>{c.email}</p>
+      <p>
+        <a href={c.linkedinUrl} target="_blank" rel="noopener noreferrer">
+          {c.linkedinLabel}
+        </a>
+      </p>
     </div>
   )
 }

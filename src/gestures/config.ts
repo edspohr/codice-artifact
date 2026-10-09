@@ -69,7 +69,11 @@ export const defaultConfig = {
   // --- world ---
   /** Mar is a channel: lateral play, but the way is up (screens). */
   MAR_SCREENS_W: 1.4,
-  MAR_SCREENS_H: 4,
+  MAR_SCREENS_H: 5.5,
+  /** On wide screens the world is at least this many viewport widths, so ink covers the whole view. */
+  WORLD_MIN_VIEW_WIDTHS: 1.15,
+  /** Wheel / trackpad: world px per wheel px (desktop drift). */
+  WHEEL_GAIN: 0.9,
   /** White stub above Mar's threshold (the next region's stand-in), in screens. */
   STUB_SCREENS_H: 1.5,
   /** Places keep this distance from the region edges (× short). */
@@ -165,15 +169,22 @@ export const defaultConfig = {
   /** Leaving a place takes a deliberate drag of at least this many px. */
   DEPART_PX: 36,
   /** The arrival sequence: the clearing opens, the text settles, the stamp lands (ms). */
-  CLEAR_OPEN_MS: 600,
+  CLEAR_OPEN_MS: 900,
   TEXT_SETTLE_MS: 500,
   STAMP_DELAY_MS: 250,
+  /** The stamp lands with a short dip of the viewpoint (px, ms). 0 disables. */
+  STAMP_DIP_PX: 5,
+  STAMP_DIP_MS: 220,
 
   // --- seal ---
   STAMP_MS: 480,
   STAMP_VIBRATE_MS: 18,
 
   // --- entry and titles ---
+  /** Cover: the signature is stamped onto the paper after this delay, then a touch dissolves the cover (ms). */
+  COVER_STAMP_DELAY_MS: 700,
+  COVER_STAMP_MS: 520,
+  COVER_DISSOLVE_MS: 1200,
   /** The white opens into the territory over this time (ms). */
   OPEN_MS: 1600,
   /** The title is an event: in, hold, out (ms). No place can emerge until it is gone. */

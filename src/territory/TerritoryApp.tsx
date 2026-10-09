@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { CURRENT_CYCLE } from '../app/cycle'
+import { config } from '../gestures/config'
 import { CanonLines } from '../components/CanonLines'
 import { canon } from '../content/canon'
 import { installLinearKeyboard, LinearPath } from '../world/linearPath'
@@ -9,8 +10,9 @@ import { buildWorld } from '../world/world'
 import { cssColor, loadAssets } from './assets'
 import { Controls } from './Controls'
 import { PlaceText } from './PlaceText'
+import { Cover } from './Cover'
 import { RegionTitle } from './RegionTitle'
-import { Tally } from './Tally'
+import { ThresholdMark } from './ThresholdMark'
 import './territory.css'
 
 export interface TerritoryHandles {
@@ -84,6 +86,17 @@ export default function TerritoryApp({
     handles.territory.setClearElements(Array.from(stage.querySelectorAll<HTMLElement>('[data-clear]')))
   })
 
+  // The cover stays mounted while it dissolves, then leaves the DOM.
+  const [coverGone, setCoverGone] = useState(false)
+  useEffect(() => {
+    if (snap.phase === 'cover') {
+      setCoverGone(false)
+      return
+    }
+    const id = window.setTimeout(() => setCoverGone(true), config.COVER_DISSOLVE_MS + 50)
+    return () => window.clearTimeout(id)
+  }, [snap.phase])
+
   const world = snap.world
   const found = new Set<number>()
   for (const s of Object.values(snap.places)) if (s.found) found.add(s.n)
@@ -114,11 +127,12 @@ export default function TerritoryApp({
               return <PlaceText key={p.n} place={p} status={s} />
             })
           : null}
-        {world ? world.thresholds.map((th) => <Tally key={th.from} threshold={th} found={found} />) : null}
+        {world ? world.thresholds.map((th) => <ThresholdMark key={th.from} threshold={th} found={found} />) : null}
       </div>
-      <div className="epigraph-veil" data-canon="epigraph" aria-hidden={snap.phase !== 'epigraph'}>
+      <div className="epigraph-veil" data-canon="epigraph" data-visible={snap.phase === 'epigraph' ? '' : undefined} aria-hidden={snap.phase !== 'epigraph'}>
         <CanonLines lines={canon.epigraph} />
       </div>
+      {snap.phase === 'cover' || !coverGone ? <Cover dismissed={snap.phase !== 'cover'} /> : null}
     </main>
   )
 }

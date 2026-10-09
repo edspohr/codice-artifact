@@ -18,10 +18,12 @@ export interface GeographyInput {
   short: number
   /** Viewport height in px (the ascent is measured in screens). */
   viewH: number
+  /** Viewport width in px (the text block width depends on it). */
+  viewW: number
 }
 
 export function placePlaces(input: GeographyInput): Place[] {
-  const { cycle, region, rect, fragments, short, viewH } = input
+  const { cycle, region, rect, fragments, short, viewH, viewW } = input
   const random = rng(hashSeed('geo', cycle, region))
   const margin = config.PLACE_EDGE_MARGIN * short
   const minDist = config.PLACE_MIN_DIST * short
@@ -32,7 +34,7 @@ export function placePlaces(input: GeographyInput): Place[] {
   const halfW = inner.w / 2
   // A place's text block (see .place in territory.css: min(30rem, 74vw)) must fit
   // inside the channel with a margin, so the viewpoint can frame it on arrival.
-  const textHalf = Math.min(240, 0.37 * short)
+  const textHalf = Math.min(240, 0.37 * viewW)
   const fitMargin = textHalf + 40
   const minX = rect.x + fitMargin
   const maxX = rect.x + rect.w - fitMargin

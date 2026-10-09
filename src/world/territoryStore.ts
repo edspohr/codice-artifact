@@ -6,7 +6,7 @@ import type { MovementId } from '../content/canon'
 import type { PlaceStatus } from './places'
 import type { World } from './types'
 
-export type Phase = 'epigraph' | 'territory'
+export type Phase = 'cover' | 'epigraph' | 'territory'
 
 export interface TerritorySnapshot {
   phase: Phase
@@ -22,7 +22,7 @@ export interface TerritorySnapshot {
 }
 
 let snapshot: TerritorySnapshot = {
-  phase: 'epigraph',
+  phase: 'cover',
   world: null,
   places: {},
   title: null,
@@ -58,7 +58,7 @@ export const territoryStore = {
     }
   },
   reset() {
-    snapshot = { phase: 'epigraph', world: null, places: {}, title: null, region: 'mar', revealAll: false, linearIndex: 0 }
+    snapshot = { phase: 'cover', world: null, places: {}, title: null, region: 'mar', revealAll: false, linearIndex: 0 }
     emit()
   },
 }

@@ -27,8 +27,11 @@ export const copy = {
     credits: 'TODO-AUTHOR: credits',
     /** Use {cycle} where the current cycle number goes. */
     cycle: 'TODO-AUTHOR: sentence that states the current cycle number, with {cycle} as placeholder',
-    contribution: 'TODO-AUTHOR: free contribution line (Phase 6, link to VITE_DONATION_URL)',
-    email: 'TODO-AUTHOR: optional email line and consent text (Phase 6)',
+    contribution: 'TODO-AUTHOR: free contribution line (Phase 7, link to VITE_DONATION_URL)',
+    email: 'TODO-AUTHOR: optional email line and consent text (Phase 7)',
+    /** The author's LinkedIn: label as shown, and the URL (author-provided). */
+    linkedinLabel: 'TODO-AUTHOR: visible label for the LinkedIn link',
+    linkedinUrl: 'https://www.linkedin.com/in/edmundo-spohr/',
   },
 } as const
 

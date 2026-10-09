@@ -6,8 +6,12 @@ import { placePlaces } from './geography'
 import type { Rect, World } from './types'
 
 export function buildWorld(viewportW: number, viewportH: number, cycle: number): World {
-  const short = Math.min(viewportW, viewportH)
-  const marW = Math.round(viewportW * config.MAR_SCREENS_W)
+  // The channel is measured in portrait "screens": on a phone the viewport itself,
+  // on a wide screen a portrait unit fitted to the viewport height. The world is
+  // never narrower than the viewport, so ink always covers the whole view.
+  const unitW = Math.min(viewportW, Math.round(viewportH * 0.5))
+  const short = Math.min(unitW, viewportH)
+  const marW = Math.max(Math.round(unitW * config.MAR_SCREENS_W), Math.round(viewportW * config.WORLD_MIN_VIEW_WIDTHS))
   const marH = Math.round(viewportH * config.MAR_SCREENS_H)
   const stubH = Math.round(viewportH * config.STUB_SCREENS_H)
   const width = marW
@@ -22,6 +26,7 @@ export function buildWorld(viewportW: number, viewportH: number, cycle: number):
     fragments: mar.fragments.map((n) => canon.fragments[n - 1]!),
     short,
     viewH: viewportH,
+    viewW: viewportW,
   })
 
   const bandH = Math.round(viewportH * config.THRESHOLD_BAND_SCREENS)
