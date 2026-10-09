@@ -168,7 +168,11 @@ export const defaultConfig = {
   /** Fracture lines across the channel, per screen of height. */
   TIERRA_LINES_PER_SCREEN: 0.8,
   /** A standing line keeps the viewpoint this many screens below it (the line stays in view). */
-  TIERRA_BLOCK_OFFSET: 0.3,
+  TIERRA_BLOCK_OFFSET: 0.12,
+  /** Pushing against a standing line damages it: px of blocked push per unit of damage (per-stroke cap applies). */
+  TIERRA_PUSH_PX_PER_UNIT: 600,
+  /** No line within this many screens of the region's entry (the first place comes before the first wall). */
+  TIERRA_ENTRY_CLEAR: 1.9,
   /** Damage per crossing of a line, the cap one stroke can deal, healing per second and its grace delay. */
   TIERRA_DAMAGE_PER_CROSS: 0.15,
   TIERRA_STROKE_CAP: 0.4,

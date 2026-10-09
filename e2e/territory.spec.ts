@@ -486,38 +486,35 @@ test.describe('territory: touch', () => {
       const lowest = lines.reduce((a, b) => (b.y > a.y ? b : a))
       const sh = t.screenHeight()
       t.camera.x = t.world.regions.find((r) => r.id === 'tierra')!.rect.w / 2
-      t.camera.y = lowest.y + sh * 0.9
+      t.camera.y = lowest.y + sh * (window.__codice!.config.TIERRA_BLOCK_OFFSET as number) + 60
       t.camera.clamp()
       t.glideTo({ x: t.camera.x, y: t.camera.y })
       return { y: lowest.y, floor: lowest.y + sh * (window.__codice!.config.TIERRA_BLOCK_OFFSET as number) }
     })
     await expect.poll(() => page.locator('.territory').getAttribute('data-region'), { timeout: 8000 }).toBe('tierra')
     await expect(page.locator('.region-title')).toHaveCount(0, { timeout: 8000 })
-    // Pull up hard, several times: the line holds.
-    for (let i = 0; i < 4; i++) await swipe(s, { x: w * 0.5, y: h * 0.25 }, { x: w * 0.5, y: h * 0.9 }, 14, 16)
-    await page.waitForTimeout(600)
-    const held = await cameraOf(page)
-    expect(held.y).toBeGreaterThanOrEqual(line.floor - 1)
-    // One scrubbing stroke across the line damages it but never breaks it.
-    const scrub = async () => {
-      const lineScreenY = await page.evaluate((ly) => ly - (window.__codice!.territory!.territory.camera.y - window.innerHeight / 2), line.y)
-      const pts = []
-      for (let i = 0; i <= 14; i++) pts.push({ x: w * 0.2 + ((w * 0.6) * i) / 14, y: lineScreenY + (i % 2 === 0 ? -28 : 28) })
-      await stroke(s, pts, 14)
-    }
-    await scrub()
+    // One hard pull up: the line holds, and the push alone damages it without breaking it.
+    await swipe(s, { x: w * 0.5, y: h * 0.25 }, { x: w * 0.5, y: h * 0.9 }, 14, 16)
+    await page.waitForTimeout(400)
+    expect((await cameraOf(page)).y).toBeGreaterThanOrEqual(line.floor - 1)
     const once = (await page.evaluate(() => window.__codice!.territory!.territory.crustLines())).find((l) => l.y === line.y)!
     expect(once.integrity).toBeLessThan(1)
     expect(once.broken).toBe(false)
-    // Insistence breaks it.
-    for (let i = 0; i < 4; i++) await scrub()
+    // Insistence (pushing again, or scrubbing across it) breaks it.
+    for (let i = 0; i < 8; i++) {
+      const l = (await page.evaluate(() => window.__codice!.territory!.territory.crustLines())).find((x) => x.y === line.y)!
+      if (l.broken) break
+      await swipe(s, { x: w * 0.5, y: h * 0.25 }, { x: w * 0.5, y: h * 0.9 }, 14, 16)
+    }
     const after = (await page.evaluate(() => window.__codice!.territory!.territory.crustLines())).find((l) => l.y === line.y)!
     expect(after.broken).toBe(true)
     await expect(page.locator('.crust__line[data-broken]')).toHaveCount(1)
-    // The way is open: the same pull now carries the viewpoint past where the line held it.
-    for (let i = 0; i < 3; i++) await swipe(s, { x: w * 0.5, y: h * 0.25 }, { x: w * 0.5, y: h * 0.9 }, 14, 16)
+    // The way is open: the viewpoint is past where the line held it, and it stays broken.
+    await page.waitForTimeout(400)
+    for (let i = 0; i < 2; i++) await swipe(s, { x: w * 0.5, y: h * 0.25 }, { x: w * 0.5, y: h * 0.9 }, 14, 16)
     await page.waitForTimeout(400)
     expect((await cameraOf(page)).y).toBeLessThan(line.floor - 50)
+    expect((await page.evaluate(() => window.__codice!.territory!.territory.crustLines())).find((l) => l.y === line.y)!.broken).toBe(true)
   })
 
   test('Cielo: the highest text thins but stays above 4.5:1 over the ground beneath it', async ({ page }) => {

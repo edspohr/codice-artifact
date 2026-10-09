@@ -59,37 +59,35 @@
 .crust__halo {
   fill: none;
   stroke: var(--ink);
-  stroke-width: calc(16px - var(--damage) * 6px);
-  stroke-linejoin: round;
+  stroke-width: calc(18px - var(--damage) * 6px);
+  stroke-linejoin: miter;
   opacity: calc(0.22 - var(--damage) * 0.1);
   filter: blur(3px);
 }
-.crust__ridge {
-  fill: none;
-  stroke: var(--ink);
-  stroke-width: calc(5px - var(--damage) * 2px);
-  stroke-linejoin: miter;
-  opacity: calc(0.85 - var(--damage) * 0.35);
+.crust__body {
+  fill: var(--ink);
+  stroke: none;
+  opacity: 0.9;
 }
-/* Damage opens a pale crack along it. */
+/* Damage opens a pale crack inside the ridge, continuous, widening as it gives. */
 .crust__crack {
   fill: none;
   stroke: var(--paper);
-  stroke-width: calc(var(--damage) * 7px);
+  stroke-width: calc(var(--damage) * 4px);
   stroke-linejoin: miter;
-  stroke-dasharray: calc(14px + var(--damage) * 30px) 6px;
+  stroke-linecap: butt;
+  opacity: calc(0.3 + var(--damage) * 0.7);
 }
-/* Broken: the ridge is gone, only the scar remains. */
+/* Broken: the wall is gone; a pale scar with faint dark lips remains. */
 .crust__line[data-broken] .crust__halo {
-  opacity: 0.06;
+  opacity: 0.05;
 }
-.crust__line[data-broken] .crust__ridge {
-  opacity: 0.18;
-  stroke-dasharray: 22px 18px;
+.crust__line[data-broken] .crust__body {
+  opacity: 0.25;
 }
 .crust__line[data-broken] .crust__crack {
-  stroke-width: 3px;
-  opacity: 0.6;
+  stroke-width: 6px;
+  opacity: 0.85;
 }
 
 /* --- places ---------------------------------------------------------------- */

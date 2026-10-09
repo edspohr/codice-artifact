@@ -4,7 +4,7 @@
 import { session } from '../app/session'
 import { config } from '../gestures/config'
 import { Camera } from './camera'
-import { blockingFloor, buildCrust, CrustState } from './crust'
+import { blockingLine, buildCrust, CrustState } from './crust'
 import { Exit } from './exit'
 import { Ink, type ClearBox, type InkAssets, type InkColors } from './ink/ink'
 import { MarPhysics, type Slip } from './physics'
@@ -15,6 +15,7 @@ import { PointerInput, type DragSample } from './input'
 import type { MovementId } from '../content/canon'
 import type { Place, Rect, Vec2, World } from './types'
 import { fragmentWords } from './reading'
+import { hashSeed, rng } from './rng'
 import { regionAt } from './world'
 
 export interface TerritoryElements {
@@ -147,19 +148,39 @@ export class Territory {
     this.physics.touchStart(performance.now())
     const yBefore = this.camera.y
     this.camera.moveBy(0, dy)
-    this.applyCrustFloor(yBefore)
+    this.applyCrustFloor(yBefore, true)
     this.physics.touchEnd(performance.now())
     this.wake()
   }
 
-  /** A standing fracture line holds the viewpoint below it: the way up is closed until it breaks. */
-  private applyCrustFloor(yBefore: number) {
+  /**
+   * A standing fracture line holds the viewpoint below it: the way up is closed until it breaks.
+   * When the visitor is pushing (a drag or the wheel), the blocked push damages the line: insistence.
+   */
+  private applyCrustFloor(yBefore: number, pushing = false) {
     if (!this.crust) return
-    const floor = blockingFloor(this.crust.crust, yBefore, this.screenH)
-    if (floor !== null && this.camera.y < floor) {
-      this.camera.y = floor
+    const block = blockingLine(this.crust.crust, yBefore, this.screenH)
+    if (block && this.camera.y < block.limit) {
+      const blocked = block.limit - this.camera.y
+      this.camera.y = block.limit
       if (this.camera.vy < 0) this.camera.vy = 0
+      if (pushing && this.crust.push(block.line, blocked, performance.now())) {
+        this.crustDirty = true
+        if (block.line.broken) this.onLineBroken()
+      }
     }
+  }
+
+  /** A line gives way: a short vibration and a low note, if available. */
+  private onLineBroken() {
+    if (!session.get().reducedMotion && typeof navigator.vibrate === 'function') {
+      try {
+        navigator.vibrate(30)
+      } catch {
+        // unsupported
+      }
+    }
+    this.sound.stamp(this.height() * 0.5)
   }
 
   private buildCrustSvg() {
@@ -170,34 +191,68 @@ export class Territory {
     svg.setAttribute('aria-hidden', 'true')
     svg.setAttribute('width', String(this.world.width))
     svg.setAttribute('height', String(this.world.height))
+    const add = (g: Element, cls: string, d: string) => {
+      const path = document.createElementNS(NS, 'path')
+      path.setAttribute('d', d)
+      path.setAttribute('class', cls)
+      g.appendChild(path)
+    }
     for (const line of this.crust.crust.lines) {
       const g = document.createElementNS(NS, 'g')
       g.setAttribute('class', 'crust__line')
-      const d = this.jagged(line.y, line.seed)
-      for (const cls of ['crust__halo', 'crust__ridge', 'crust__crack']) {
-        const path = document.createElementNS(NS, 'path')
-        path.setAttribute('d', d)
-        path.setAttribute('class', cls)
-        g.appendChild(path)
-      }
+      const shape = this.fracture(line.y, line.seed)
+      add(g, 'crust__halo', shape.center)
+      add(g, 'crust__body', shape.body)
+      for (const branch of shape.branches) add(g, 'crust__body', branch)
+      add(g, 'crust__crack', shape.center)
       svg.appendChild(g)
     }
     this.els.textLayer.insertBefore(svg, this.els.textLayer.firstChild)
     this.crustSvg = svg
   }
 
-  /** A jagged horizontal path across the channel, seeded. */
-  private jagged(y: number, seed: number): string {
-    const steps = 42
+  /**
+   * A fracture across the channel, seeded: a centreline that advances in
+   * irregular steps with sudden kinks, a body whose thickness swells and
+   * thins, and a few short tapered branches. Broken, not smooth.
+   */
+  private fracture(y: number, seed: number): { center: string; body: string; branches: string[] } {
+    const random = rng(hashSeed('fracture', this.world.cycle, seed))
     const w = this.world.width
-    let x = Math.sin(seed) * 0.5 + 0.5
-    const pts: string[] = []
-    for (let i = 0; i <= steps; i++) {
-      x = Math.sin(seed * 12.9898 + i * 78.233) * 43758.5453
-      const j = (x - Math.floor(x) - 0.5) * this.screenH * (i % 5 === 0 ? 0.07 : 0.025)
-      pts.push(`${((w * i) / steps).toFixed(1)},${(y + j).toFixed(1)}`)
+    const maxOff = this.screenH * 0.045
+    const pts: Array<{ x: number; y: number; t: number }> = []
+    let x = -8
+    let off = 0
+    let thick = 4
+    while (x < w + 8) {
+      pts.push({ x, y: y + off, t: thick })
+      x += 5 + random() * 18
+      const kink = random() < 0.16
+      off += (random() - 0.5) * (kink ? 26 : 7)
+      off -= off * 0.08 // drift back toward the line
+      off = Math.max(-maxOff, Math.min(maxOff, off))
+      thick = Math.max(1.2, Math.min(9, thick + (random() - 0.5) * 3.2))
     }
-    return `M${pts.join(' L')}`
+    const f = (n: number) => n.toFixed(1)
+    const center = 'M' + pts.map((p) => `${f(p.x)},${f(p.y)}`).join(' L')
+    const upper = pts.map((p) => `${f(p.x)},${f(p.y - p.t / 2)}`)
+    const lower = pts.map((p) => `${f(p.x)},${f(p.y + p.t / 2)}`).reverse()
+    const body = `M${upper.join(' L')} L${lower.join(' L')} Z`
+    const branches: string[] = []
+    const count = 2 + Math.floor(random() * 3)
+    for (let i = 0; i < count; i++) {
+      const base = pts[Math.floor(random() * pts.length)]!
+      const dir = random() < 0.5 ? -1 : 1
+      const len = 18 + random() * 46
+      const ang = (random() - 0.5) * 1.6
+      const ex = base.x + Math.sin(ang) * len
+      const ey = base.y + dir * Math.cos(ang) * len
+      const mx = (base.x + ex) / 2 + (random() - 0.5) * 10
+      const my = (base.y + ey) / 2 + (random() - 0.5) * 6
+      const t = Math.max(1, base.t * 0.6)
+      branches.push(`M${f(base.x - t)},${f(base.y)} L${f(mx)},${f(my)} L${f(ex)},${f(ey)} L${f(mx + 0.8)},${f(my + 0.4)} L${f(base.x + t)},${f(base.y)} Z`)
+    }
+    return { center, body, branches }
   }
 
   private syncCrustSvg() {
@@ -327,8 +382,12 @@ export class Territory {
     const slip = this.physics.drag(s.x, s.y, s.x - prev.x, s.y - prev.y, dt, s.t)
     // Tierra: a finger stroke that crosses a fracture line damages it; a standing line holds the way up.
     if (this.crust) {
-      if (this.crust.strokeSegment(slip.from, slip.to, s.t).length > 0) this.crustDirty = true
-      this.applyCrustFloor(yBefore)
+      const hit = this.crust.strokeSegment(slip.from, slip.to, s.t)
+      if (hit.length > 0) {
+        this.crustDirty = true
+        if (hit.some((l) => l.broken)) this.onLineBroken()
+      }
+      this.applyCrustFloor(yBefore, true)
     }
     // Accumulate slip into one brush segment per frame.
     if (this.pendingSlip) {

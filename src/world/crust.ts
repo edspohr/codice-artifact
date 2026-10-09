@@ -25,7 +25,7 @@ export function buildCrust(region: Rect, viewH: number, cycle: number, avoidY: r
   const random = rng(hashSeed('crust', cycle))
   const count = Math.max(1, Math.round((region.h / viewH) * config.TIERRA_LINES_PER_SCREEN))
   const top = region.y + viewH * 0.9
-  const bottom = region.y + region.h - viewH * 1.1
+  const bottom = region.y + region.h - viewH * config.TIERRA_ENTRY_CLEAR
   const span = Math.max(0, bottom - top)
   const lines: CrustLine[] = []
   for (let i = 0; i < count; i++) {
@@ -39,23 +39,28 @@ export function buildCrust(region: Rect, viewH: number, cycle: number, avoidY: r
       if (near === undefined) break
       y = near + (y >= near ? clearance : -clearance)
     }
-    if (y < region.y + viewH * 0.6 || y > region.y + region.h - viewH * 0.8) continue
+    if (y < region.y + viewH * 0.6 || y > bottom) continue
     lines.push({ y, seed: Math.floor(random() * 1000), integrity: 1, broken: false })
   }
   lines.sort((a, b) => b.y - a.y) // bottom first
   return { lines }
 }
 
-/** The lowest y the viewpoint may reach: the first standing line below, offset so the line stays in view. */
-export function blockingFloor(crust: Crust, cameraY: number, viewH: number): number | null {
-  let floor: number | null = null
+/** The standing line that holds the viewpoint from below, with the lowest y the viewpoint may reach. */
+export function blockingLine(crust: Crust, cameraY: number, viewH: number): { line: CrustLine; limit: number } | null {
+  let best: { line: CrustLine; limit: number } | null = null
   for (const line of crust.lines) {
     if (line.broken) continue
     const limit = line.y + viewH * config.TIERRA_BLOCK_OFFSET
     // A line blocks only from below: once the viewpoint is above it, it does not catch it on the way down.
-    if (cameraY >= limit - 1 && (floor === null || limit > floor)) floor = limit
+    if (cameraY >= limit - 1 && (best === null || limit > best.limit)) best = { line, limit }
   }
-  return floor
+  return best
+}
+
+/** The lowest y the viewpoint may reach (see blockingLine). */
+export function blockingFloor(crust: Crust, cameraY: number, viewH: number): number | null {
+  return blockingLine(crust, cameraY, viewH)?.limit ?? null
 }
 
 export class CrustState {
@@ -89,6 +94,19 @@ export class CrustState {
     }
     this.healAfter = now + config.TIERRA_HEAL_DELAY_MS
     return hit
+  }
+
+  /** Pushing against a standing line: blocked push in px becomes damage, within the per-stroke cap. */
+  push(line: CrustLine, px: number, now: number): boolean {
+    if (line.broken || px <= 0) return false
+    const dealt = this.strokeDamage.get(line) ?? 0
+    const add = Math.min(config.TIERRA_STROKE_CAP - dealt, px / Math.max(1, config.TIERRA_PUSH_PX_PER_UNIT))
+    if (add <= 0) return false
+    this.strokeDamage.set(line, dealt + add)
+    line.integrity = Math.max(0, line.integrity - add)
+    if (line.integrity <= 0) line.broken = true
+    this.healAfter = now + config.TIERRA_HEAL_DELAY_MS
+    return true
   }
 
   strokeEnd(now: number) {
