@@ -289,31 +289,106 @@
 .cover {
   position: absolute;
   inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-  gap: 3.6rem;
-  padding: 0 var(--gutter);
-  margin: 0 auto;
-  max-width: var(--stage-max-w);
+  overflow: hidden;
   background: var(--paper);
   pointer-events: none;
-  transition: opacity var(--cover-dissolve-ms, 1200ms) ease-in;
+  /* The ink rises first; then the cover gives way to the epigraph. */
+  transition: opacity calc(var(--cover-dissolve-ms, 1200ms) * 0.55) ease-in calc(var(--cover-dissolve-ms, 1200ms) * 0.6);
 }
 .cover[data-dismissed] {
   opacity: 0;
 }
+.cover__body {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3.6rem;
+  max-width: var(--stage-max-w);
+  margin: 0 auto;
+  padding: calc(env(safe-area-inset-top, 0px) + 20vh) var(--gutter) 0;
+  transition: opacity calc(var(--cover-dissolve-ms, 1200ms) * 0.4) ease-in;
+}
+.cover[data-dismissed] .cover__body {
+  opacity: 0;
+}
+
+/* The ink of Mar waits below: the darkest part of its ground, fading up into the paper. */
+.cover__ink {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 42%;
+  -webkit-mask-image: linear-gradient(to top, #000 45%, transparent);
+  mask-image: linear-gradient(to top, #000 45%, transparent);
+  animation: cover-ink-in 2.4s ease-out both;
+  transition: height var(--cover-dissolve-ms, 1200ms) cubic-bezier(0.55, 0, 0.75, 0.2);
+}
+.cover__ink img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 100%;
+}
+.cover[data-dismissed] .cover__ink {
+  height: 130%;
+}
+@keyframes cover-ink-in {
+  from {
+    opacity: 0;
+    translate: 0 6%;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+/* The title, broken: the real text carries meaning for assistive tech; two
+   drawn halves sit out of register along a fracture. */
 .cover__title {
+  position: relative;
+  width: fit-content;
   margin: 0;
   font-family: var(--font-title);
   font-weight: 300;
-  font-size: var(--title-size);
-  line-height: 1.2;
-  letter-spacing: 0.22em;
+  font-size: calc(var(--title-size) * 1.45);
+  line-height: 1.18;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
+  color: transparent;
+}
+.cover__title::before,
+.cover__title::after {
+  content: attr(data-title);
+  position: absolute;
+  inset: 0;
   color: var(--ink);
 }
+.cover__title::before {
+  clip-path: var(--cover-above);
+}
+.cover__title::after {
+  clip-path: var(--cover-below);
+  translate: 0.2em 0.07em;
+}
+.cover__crack {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+/* The fracture is a thin vein of paper through the letters, not a line drawn on them. */
+.cover__crack polyline {
+  fill: none;
+  stroke: var(--paper);
+  stroke-width: 2.5px;
+  vector-effect: non-scaling-stroke;
+  stroke-linejoin: miter;
+}
+
 .cover__stamp {
   position: relative;
   align-self: flex-start;
@@ -507,8 +582,14 @@
     animation-duration: 200ms, 200ms;
   }
   .cover,
+  .cover__body,
+  .cover__ink,
   .epigraph-veil {
     transition-duration: 200ms;
+    transition-delay: 0ms;
+  }
+  .cover__ink {
+    animation: none;
   }
   .cover__stamp,
   .cover__bloom {
