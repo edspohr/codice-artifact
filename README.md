@@ -9,6 +9,10 @@ The piece is the territory: four channels stacked (Mar, Tierra, Cordillera, Ciel
 
 ```bash
 pnpm dev            # http://localhost:5173 (or the LAN address on a phone)
+pnpm test           # unit tests
+pnpm test:e2e       # Playwright: two phones with touch, one desktop
+pnpm ship           # build and deploy to Firebase Hosting (codice-tiempo-roto)
+pnpm ship:preview   # build and deploy to a 7-day preview channel
 ```
 
 - `?reveal=1` reveals all places (dev builds only). `?cfg.EPIGRAPH_MIN_MS=0` skips the epigraph's reading time.
