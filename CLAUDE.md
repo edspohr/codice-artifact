@@ -27,7 +27,7 @@ Language rule: code, comments, commits and docs in **English**. Everything a vis
 
 ### 3.1 Entry
 
-- **The cover.** White. The title of the work in Archivo Light 300, broken by a fracture: a vein of paper through the letters, the two halves out of register. Beneath it, the author's real signature (traced once from paper, never a handwriting typeface), stamped onto the paper with an ink impact. Below, the ink of Mar waits. A touch makes the ink rise and swallow the cover: the ascent begins. The cover appears once per visit.
+- **The cover.** White. The title of the work in Archivo Light 300, broken by a fracture: a vein of paper through the letters, the two halves out of register. Beneath it, centred, small and set low so the title leads, the author's real signature (traced once from paper, never a handwriting typeface), stamped onto the paper with an ink impact. Below, the ink of Mar waits. A touch makes the ink rise and swallow the cover: the ascent begins. The cover appears once per visit.
 - **The epigraph** alone on white, read before it gives way: after a minimum time, a tap or a deliberate drag (never a stray brush) is the first mark (and, if sound is on, the first note); the white opens into the territory at the bottom of Mar.
 
 ### 3.2 The territory
