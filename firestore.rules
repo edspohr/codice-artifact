@@ -1,0 +1,19 @@
+rules_version = '2';
+// Clients never write. They read the current state of the cycle and the
+// aggregated patina; everything else is closed. Mutations go through the
+// callable functions (App Check, validation, caps, rate limits).
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /state/current {
+      allow read: if true;
+      allow write: if false;
+    }
+    match /patina/{id} {
+      allow read: if true;
+      allow write: if false;
+    }
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

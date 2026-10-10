@@ -195,6 +195,8 @@ uniform float uNoiseScale; // world px per noise tile
 uniform vec4 uHelp;        // target x, y, bias, active
 uniform vec3 uGrain;       // strength, wiggle, wavelength (px)
 uniform float uHelpBoost;  // invoked help: the grain shows even on light ground
+uniform sampler2D uPatina; // shared wear of this region: R = handled, G = lingered (0..1, log-scaled)
+uniform vec2 uPatinaParams; // strength, linger weight
 uniform float uShort;
 uniform vec4 uBandA;       // threshold band below: y, height, mass, enabled
 uniform vec4 uBandB;       // threshold band above: y, height, mass, enabled
@@ -250,6 +252,13 @@ void main() {
       float away = smoothstep(uShort * 0.7, uShort * 1.8, length(uHelp.xy - p));
       d = clamp(d + max(0.0, streak - 0.5) * uHelpBoost * 1.0 * away, 0.0, 1.0);
     }
+  }
+
+  // The patina: where many have handled and lingered, the ink is worn paler, like the edge of a much-read book.
+  if (uPatinaParams.x > 0.0) {
+    vec4 wear = texture2D(uPatina, uv);
+    float worn = clamp(wear.r + wear.g * uPatinaParams.y, 0.0, 1.0);
+    d *= 1.0 - uPatinaParams.x * worn * (0.75 + 0.25 * n.b);
   }
 
   float f = 0.0;

@@ -216,6 +216,17 @@ export const defaultConfig = {
   /** Text in Cielo thins with height down to this alpha (never below the contrast floor). */
   CIELO_TEXT_MIN_ALPHA: 0.66,
 
+  // --- the patina (shared wear, desire paths) ---
+  /** 0 disables the patina entirely (no Firebase at all). */
+  PATINA_ENABLED: 1,
+  /** Client-side minimum between two batches (ms). The function enforces its own. */
+  PATINA_MIN_INTERVAL_MS: 2500,
+  /** How strongly worn cells read (0..1) and the handled amount (screens) at which a cell is fully worn. */
+  PATINA_STRENGTH: 0.4,
+  PATINA_SATURATE: 60,
+  /** Lingering adds a little to the wear (seconds counted as one screen of handling). */
+  PATINA_LINGER_WEIGHT: 0.15,
+
   // --- the exit (fragment 22) ---
   /** Reading dwell before stillness counts: base margin plus time per canon word (ms). */
   CIELO_DWELL_BASE_MS: 2500,

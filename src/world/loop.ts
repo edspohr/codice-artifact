@@ -6,6 +6,8 @@ import { config } from '../gestures/config'
 import { Camera } from './camera'
 import { blockingLine, buildCrust, CrustState } from './crust'
 import { Exit } from './exit'
+import { Patina } from '../patina/patina'
+import { COLS, ROWS } from '../patina/grid'
 import { Ink, type ClearBox, type InkAssets, type InkColors } from './ink/ink'
 import { MarPhysics, type Slip } from './physics'
 import { Places } from './places'
@@ -86,6 +88,7 @@ export class Territory {
   private crustSvg: SVGSVGElement | null = null
   private crustDirty = true
   private screenH = 1
+  readonly patina: Patina
   // Active help: holding the finger still gathers the grain toward the nearest unfound place.
   private holdStart: number | null = null
   private holdMoved = 0
@@ -123,6 +126,11 @@ export class Territory {
     })
     window.addEventListener('resize', this.onResize)
     els.stage.addEventListener('wheel', this.onWheel, { passive: false })
+    // The shared patina: connected lazily, never blocking the piece.
+    this.patina = new Patina(this.world, this.screenH, (grids) => {
+      this.ink.setPatina(grids, COLS, ROWS)
+      this.wake()
+    })
     for (const p of this.world.places) territoryStore.setPlace(this.places.get(p.n))
     territoryStore.patch({ world: this.world, revealAll: this.revealAll })
     this.syncDom()
@@ -293,6 +301,8 @@ export class Territory {
     if (this.raf) cancelAnimationFrame(this.raf)
     if (this.idleTimer) clearTimeout(this.idleTimer)
     this.sound.noteOff(true)
+    void this.patina.flush()
+    this.patina.stop()
     this.ink.dispose()
   }
 
@@ -304,6 +314,7 @@ export class Territory {
     this.opening = true
     this.openStart = now
     territoryStore.patch({ phase: 'territory' })
+    void this.patina.start()
     this.showTitle(regionAt(this.world, this.camera.y).id, now)
   }
 
@@ -745,6 +756,12 @@ export class Territory {
       // The first mark before the white opens still lands in the field.
     }
     this.ink.step(dt / 1000, brush, this.dirt, this.viewRect())
+    // This visit's wear, aggregated into the patina grid (never sent as strokes).
+    if (brush && territoryStore.get().phase === 'territory') this.patina.collector.handled(brush.ax, brush.ay, brush.bx, brush.by)
+    if (territoryStore.get().phase === 'territory' && this.exit.current === 'idle') {
+      const still = this.resting || Math.hypot(this.camera.vx, this.camera.vy) < 0.02
+      if (still) this.patina.collector.lingered(this.camera.x, this.camera.y, dt / 1000)
+    }
     if (brush || now - this.lastDragT < 1500) active = true
 
     // Sway from camera velocity (text as matter in Mar).

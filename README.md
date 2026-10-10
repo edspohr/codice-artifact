@@ -11,6 +11,10 @@ The piece is the territory: four channels stacked (Mar, Tierra, Cordillera, Ciel
 pnpm dev            # http://localhost:5173 (or the LAN address on a phone)
 pnpm test           # unit tests
 pnpm test:e2e       # Playwright: two phones with touch, one desktop
+pnpm emulators      # Firestore + Functions emulators (Java 21 from Homebrew), UI on :4000
+pnpm test:rules     # security rules against the Firestore emulator
+pnpm test:functions # patina delta validation (unit)
+pnpm test:patina    # two browsers see each other's wear, against the emulators
 pnpm ship           # build and deploy to Firebase Hosting (codice-tiempo-roto)
 pnpm ship:preview   # build and deploy to a 7-day preview channel
 ```
@@ -25,7 +29,7 @@ pnpm ship:preview   # build and deploy to a 7-day preview channel
   exposes the live `Territory` and `LinearPath`.
 - Sound: `?cfg.SOUND_ENABLED=1` (off by default, always off in tests).
 
-Firebase is not installed in this phase. `.env.local` (gitignored) holds the project's web config; `.env.example`
+In development the client only talks to the emulators (`VITE_USE_EMULATORS=1`); only the published build talks to the real project. Firebase was not installed before Phase 4. `.env.local` (gitignored) holds the project's web config; `.env.example`
 lists the same keys empty. Never add a measurement ID; the piece has no analytics.
 
 ### Author-only

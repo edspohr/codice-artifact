@@ -75,6 +75,7 @@ export class Ink {
   private groundImg = new Map<MovementId, WebGLTexture>()
   private formTex = new Map<number, WebGLTexture>()
   private sims: RegionSim[] = []
+  private patinaTex = new Map<MovementId, WebGLTexture>()
   private lost = false
   readonly canvas: HTMLCanvasElement
   private world: World
@@ -104,7 +105,7 @@ export class Ink {
     this.progComposite = createProgram(gl, VERT, COMPOSITE_FRAG, [
       'uDensity', 'uGround', 'uVI', 'uNoise', 'uForm0', 'uForm1', 'uForm2', 'uForm3',
       'uPlace[0]', 'uView', 'uWorld', 'uOpen', 'uPaper', 'uInk', 'uAccentColor', 'uAccent',
-      'uClear[0]', 'uClearCount', 'uClearParams', 'uClearResidual', 'uNoiseScale', 'uHelp', 'uGrain', 'uShort', 'uBandA', 'uBandB', 'uHelpBoost',
+      'uClear[0]', 'uClearCount', 'uClearParams', 'uClearResidual', 'uNoiseScale', 'uHelp', 'uGrain', 'uShort', 'uBandA', 'uBandB', 'uHelpBoost', 'uPatina', 'uPatinaParams',
     ])
     this.noise = createTexture(gl, NOISE_SIZE, NOISE_SIZE, noiseTextureData(), gl.REPEAT)
     for (const [id, img] of assets.grounds) this.groundImg.set(id, createTexture(gl, 0, 0, img))
@@ -330,12 +331,13 @@ export class Ink {
       .map((p) => ({ p, u: places.find((x) => x.x === p.x && x.y === p.y), d: Math.hypot(p.x - cx, p.y - cy) }))
       .filter((c) => c.u && c.u.reveal > 0)
       .sort((a, b) => a.d - b.d)
-      .slice(0, 4)
+      .slice(0, 3)
     const placeData = new Float32Array(16)
+    // WebGL1 guarantees eight texture units (0–7): three formations (4–6), the patina (7).
     for (let i = 0; i < 4; i++) {
-      const c = candidates[i]
+      const c = i < 3 ? candidates[i] : undefined
       const tex = c ? (this.formTex.get(c.p.n) ?? this.noise) : this.noise
-      bindTexture(gl, 4 + i, tex, u[formNames[i] as string] ?? null)
+      bindTexture(gl, i < 3 ? 4 + i : 3, i < 3 ? tex : this.noise, u[formNames[i] as string] ?? null)
       if (c && c.u) placeData.set([c.p.x, c.p.y, c.u.radius, c.u.reveal], i * 4)
     }
     gl.uniform4fv(u['uPlace[0]'] ?? null, placeData)
@@ -361,6 +363,9 @@ export class Ink {
     gl.uniform4f(u.uHelp ?? null, help ? help.x : 0, help ? help.y : 0, help ? help.bias : 0, help ? 1 : 0)
     gl.uniform3f(u.uGrain ?? null, config.GRAIN_STRENGTH + (help ? help.boost : 0), config.MAR_CURRENT_WIGGLE, Math.max(50, config.MAR_CURRENT_SCALE))
     gl.uniform1f(u.uHelpBoost ?? null, help ? help.boost : 0)
+    const patina = this.patinaTex.get(sim.id)
+    bindTexture(gl, 7, patina ?? this.noise, u.uPatina ?? null)
+    gl.uniform2f(u.uPatinaParams ?? null, patina ? config.PATINA_STRENGTH : 0, config.PATINA_LINGER_WEIGHT)
     gl.uniform1f(u.uShort ?? null, short)
     // The thresholds touching this region: below (from this region) and above (into it).
     const below = this.world.thresholds.find((t) => t.from === sim.id)
@@ -369,6 +374,26 @@ export class Ink {
     gl.uniform4f(u.uBandA ?? null, below ? below.band.y : 0, below ? below.band.h : 1, config.THRESHOLD_MASS, below && on ? 1 : 0)
     gl.uniform4f(u.uBandB ?? null, above ? above.band.y : 0, above ? above.band.h : 1, config.THRESHOLD_MASS, above && on ? 1 : 0)
     drawQuad(gl, this.quad, this.progComposite.attrib)
+  }
+
+  /**
+   * The shared patina of each region, as a small texture (COLS × ROWS):
+   * R = handled, G = lingered, both log-scaled to 0..1 against saturation.
+   */
+  setPatina(grids: Map<MovementId, { h: Float32Array; l: Float32Array }>, cols: number, rows: number) {
+    const gl = this.gl
+    const sat = Math.log1p(Math.max(1, config.PATINA_SATURATE))
+    for (const [id, g] of grids) {
+      const data = new Uint8Array(cols * rows * 4)
+      for (let i = 0; i < cols * rows; i++) {
+        data[i * 4] = Math.round(255 * Math.min(1, Math.log1p(g.h[i] ?? 0) / sat))
+        data[i * 4 + 1] = Math.round(255 * Math.min(1, Math.log1p(g.l[i] ?? 0) / sat))
+        data[i * 4 + 3] = 255
+      }
+      const old = this.patinaTex.get(id)
+      if (old) gl.deleteTexture(old)
+      this.patinaTex.set(id, createTexture(gl, cols, rows, data))
+    }
   }
 
   /** Reads one pixel of the last render (call right after render, same task). Screen px, top-down. */
