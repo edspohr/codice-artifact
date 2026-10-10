@@ -404,6 +404,49 @@ test.describe('territory: touch', () => {
     expect(await strength()).toBeLessThan(0.2)
   })
 
+  test('in Cielo the invoked help shows as strands in the light ground', async ({ page }) => {
+    await page.goto(`${BASE}&cfg.MAR_CURRENT_SPEED=0`)
+    await ready(page)
+    await enter(page)
+    await page.evaluate(() => {
+      const t = window.__codice!.territory!.territory
+      // The point of Cielo farthest from every place: the strands fade near places by design.
+      const cielo = t.world.regions.find((r) => r.id === 'cielo')!.rect
+      const ps = t.world.places.filter((p) => p.n >= 17)
+      let best = cielo.y + cielo.h / 2
+      let bestD = -1
+      for (let y = cielo.y + 500; y < cielo.y + cielo.h - 500; y += 20) {
+        const d = Math.min(...ps.map((p) => Math.abs(p.y - y)))
+        if (d > bestD) {
+          bestD = d
+          best = y
+        }
+      }
+      t.camera.x = cielo.x + cielo.w / 2
+      t.camera.y = best
+      t.camera.clamp()
+      t.glideTo({ x: t.camera.x, y: t.camera.y })
+    })
+    await expect.poll(() => page.locator('.territory').getAttribute('data-region'), { timeout: 8000 }).toBe('cielo')
+    await expect(page.locator('.region-title')).toHaveCount(0, { timeout: 8000 })
+    const texture = () =>
+      page.evaluate(() => {
+        const t = window.__codice!.territory!.territory
+        const v: number[] = []
+        for (let i = 0; i < 60; i++) v.push(t.readPixel(20 + i * 5, window.innerHeight / 2)[0])
+        const m = v.reduce((a, b) => a + b) / v.length
+        return v.reduce((a, x) => a + Math.abs(x - m), 0) / v.length
+      })
+    const before = await texture()
+    const s = await cdp(page)
+    const v = page.viewportSize()!
+    await s.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: v.width / 2, y: v.height / 2 }] })
+    await page.waitForTimeout(1800)
+    const held = await texture()
+    await s.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+    expect(held).toBeGreaterThan(before + 2)
+  })
+
   test('finding has a cost: a scar around the place and dirtier hands after each stamp', async ({ page }) => {
     await page.goto(`${BASE}&cfg.MAR_CURRENT_SPEED=0`)
     await ready(page)

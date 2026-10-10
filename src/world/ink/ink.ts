@@ -104,7 +104,7 @@ export class Ink {
     this.progComposite = createProgram(gl, VERT, COMPOSITE_FRAG, [
       'uDensity', 'uGround', 'uVI', 'uNoise', 'uForm0', 'uForm1', 'uForm2', 'uForm3',
       'uPlace[0]', 'uView', 'uWorld', 'uOpen', 'uPaper', 'uInk', 'uAccentColor', 'uAccent',
-      'uClear[0]', 'uClearCount', 'uClearParams', 'uClearResidual', 'uNoiseScale', 'uHelp', 'uGrain', 'uShort', 'uBandA', 'uBandB',
+      'uClear[0]', 'uClearCount', 'uClearParams', 'uClearResidual', 'uNoiseScale', 'uHelp', 'uGrain', 'uShort', 'uBandA', 'uBandB', 'uHelpBoost',
     ])
     this.noise = createTexture(gl, NOISE_SIZE, NOISE_SIZE, noiseTextureData(), gl.REPEAT)
     for (const [id, img] of assets.grounds) this.groundImg.set(id, createTexture(gl, 0, 0, img))
@@ -360,6 +360,7 @@ export class Ink {
     gl.uniform1f(u.uNoiseScale ?? null, short * 0.9)
     gl.uniform4f(u.uHelp ?? null, help ? help.x : 0, help ? help.y : 0, help ? help.bias : 0, help ? 1 : 0)
     gl.uniform3f(u.uGrain ?? null, config.GRAIN_STRENGTH + (help ? help.boost : 0), config.MAR_CURRENT_WIGGLE, Math.max(50, config.MAR_CURRENT_SCALE))
+    gl.uniform1f(u.uHelpBoost ?? null, help ? help.boost : 0)
     gl.uniform1f(u.uShort ?? null, short)
     // The thresholds touching this region: below (from this region) and above (into it).
     const below = this.world.thresholds.find((t) => t.from === sim.id)

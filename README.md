@@ -11,7 +11,10 @@ The piece is the territory: four channels stacked (Mar, Tierra, Cordillera, Ciel
 pnpm dev            # http://localhost:5173 (or the LAN address on a phone)
 ```
 
-- `?reveal=1` reveals all places (dev builds only).
+- `?reveal=1` reveals all places (dev builds only). `?cfg.EPIGRAPH_MIN_MS=0` skips the epigraph's reading time.
+- Regions: Mar (traction, inertia, current), Tierra (crust lines broken by pushing or scrubbing), Cordillera
+  (climbing by stretches with fatigue), Cielo (drift sustained by stillness). Holding still invokes the help.
+- The exit at 22: dwell, stillness, dissolution, reprise, the lone seal, the Colofón.
 - `?place=3` glides to place 3; `?stop=N` jumps the linear path (0 cover, 1 epigraph, then places in order with each region's threshold after its last place).
 - `?cfg.KEY=value` overrides any value of `src/gestures/config.ts`: traction, lag, friction, currents, help bias,
   emergence and arrival distances, brush, drying, accent, clearing, sway, stamp, sound. `window.__codice.territory`

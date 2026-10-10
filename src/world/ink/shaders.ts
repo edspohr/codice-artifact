@@ -194,6 +194,7 @@ uniform float uClearResidual;
 uniform float uNoiseScale; // world px per noise tile
 uniform vec4 uHelp;        // target x, y, bias, active
 uniform vec3 uGrain;       // strength, wiggle, wavelength (px)
+uniform float uHelpBoost;  // invoked help: the grain shows even on light ground
 uniform float uShort;
 uniform vec4 uBandA;       // threshold band below: y, height, mass, enabled
 uniform vec4 uBandB;       // threshold band above: y, height, mass, enabled
@@ -242,6 +243,13 @@ void main() {
     vec2 q = vec2(dot(p, perp) / (uShort * 0.022), dot(p, dir) / (uShort * 0.14));
     float streak = texture2D(uNoise, q / 64.0).a;
     d = clamp(d + (streak - 0.5) * uGrain.x * d, 0.0, 1.0);
+    // Invoked, the grain gathers into visible strands of ink pointing the way,
+    // also where the ground is light (Cordillera, Cielo). It never moves the visitor there.
+    // Strands fade out near the place: a current that leads toward it, never rays converging on it.
+    if (uHelpBoost > 0.0 && uHelp.w > 0.5) {
+      float away = smoothstep(uShort * 0.7, uShort * 1.8, length(uHelp.xy - p));
+      d = clamp(d + max(0.0, streak - 0.5) * uHelpBoost * 1.0 * away, 0.0, 1.0);
+    }
   }
 
   float f = 0.0;
