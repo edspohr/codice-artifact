@@ -48,6 +48,8 @@ export function placePlaces(input: GeographyInput): Place[] {
   const topSlot = inner.y + (fragments.some((f) => f.n === 22) ? short * 0.15 : Math.max(short * 0.15, viewH * 1.05 - margin))
   const span = Math.max(0, bottomSlot - topSlot)
   const step = count > 1 ? span / (count - 1) : 0
+  // Places are spread along the ascent by their slots; the minimum distance never asks for more than the slots allow.
+  const minDistEff = count > 1 ? Math.min(minDist, step * 0.8) : minDist
   let side = random() < 0.5 ? -1 : 1
 
   const placed: Place[] = []
@@ -61,7 +63,7 @@ export function placePlaces(input: GeographyInput): Place[] {
       const lateral = (config.PLACE_LATERAL + (random() - 0.5) * 2 * config.PLACE_LATERAL_JITTER) * halfW
       const x = Math.min(Math.min(inner.x + inner.w, maxX), Math.max(Math.max(inner.x, minX), centreX + side * lateral))
       const y = Math.min(inner.y + inner.h, Math.max(inner.y, slotY + jitterY))
-      const ok = placed.every((p) => Math.hypot(p.x - x, p.y - y) >= minDist * (1 - relax * 0.5))
+      const ok = placed.every((p) => Math.hypot(p.x - x, p.y - y) >= minDistEff * (1 - relax * 0.5))
       if (ok) best = { x, y }
     }
     if (!best) throw new Error(`geography: could not place fragment ${fragment.n}`)

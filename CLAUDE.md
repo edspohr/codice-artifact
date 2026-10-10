@@ -75,6 +75,7 @@ Decided with the author: in Tierra, fracture lines across the channel close the 
 
 - Regions are crossed in order. The passage up to the next region is a **threshold** at the top of each region, crossed with that region's own physics at full expression. Entering a region shows its **movement title** over the ground (typography per spec §5.1).
 - **The title is an event, not an object.** It appears alone on entering the region and dissolves before any place can emerge. A title and a fragment are never on screen together.
+- **Air between texts is consistent in every region:** regions are tall enough for about a screen and a half between places, and in Tierra each fracture lies in the gap between two places, never before the first. The entry title of a region waits until the closing of the region below has left the screen.
 - **The closing of a region is an object.** At the threshold, anchored to the world, the region's title with the tally beneath it: the summary of what was done, and the passage. The ink parts around it.
 - **The threshold is a colossus.** A mass of ink at full expression across the band, crossed with the region's physics at their strongest (in Mar: the current at its fastest, less traction). There is no pulled-back view anywhere in the piece (the author removed the look back: it broke immersion); the DOM text is never scaled.
 - A threshold is **always passable**: the journey never requires completeness.
@@ -146,7 +147,7 @@ Summary:
 
 - **Ink greys on white, plus one accent.** The accent is the burgundy of section 3.7 and belongs only to the visitor's trace.
 - **Type.** Movement titles in **Archivo**, uppercase, modulated per movement (Mar Light 300, Tierra Black 900, Cordillera SemiBold 600, Cielo Thin 100; details and the optional per-word mix in spec §5.1). Body in **Spectral**, natural tracking, generous line-height, left-aligned, sized in rem. Self-hosted.
-- **The seal:** a brutalist, imperfectly hand-stamped solid rectangle (about 4:5) with the Roman numeral in negative, set in Archivo as real text. Fragments 1–21 carry I–XXI; fragment 22 carries 0; the final lone seal carries nothing. Blind impressions (the tally) are the same shape without ink or numeral.
+- **The seal:** a brutalist, imperfectly hand-stamped solid rectangle (about 4:5, just large enough to hold XVIII: the author asked for a smaller card at the same numeral size) with the Roman numeral in negative, set in Archivo as real text. Fragments 1–21 carry I–XXI; fragment 22 carries 0; the final lone seal carries nothing. Blind impressions (the tally) are the same shape without ink or numeral.
 - **Plates are terrain, never pictures.** The mother plate of a movement is the ground of its region; a fragment's plate is the local ink formation at its place. Everything blends with soft masks into one continuous field. No rectangle is ever visible.
 - **Broken, not smooth.** Fractures, cut lines and misregistration are native vocabulary. No decorative flourishes.
 

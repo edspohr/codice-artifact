@@ -16,9 +16,9 @@ export const defaultConfig = {
   /** Each region is a channel: lateral play, but the way is up. Width and heights in screens. */
   MAR_SCREENS_W: 1.4,
   MAR_SCREENS_H: 5.5,
-  TIERRA_SCREENS_H: 5,
-  CORDILLERA_SCREENS_H: 5,
-  CIELO_SCREENS_H: 4.5,
+  TIERRA_SCREENS_H: 8,
+  CORDILLERA_SCREENS_H: 8,
+  CIELO_SCREENS_H: 7.5,
   /** On wide screens the world is at least this many viewport widths, so ink covers the whole view. */
   WORLD_MIN_VIEW_WIDTHS: 1.15,
   /** Wheel / trackpad: world px per wheel px (desktop drift). */
@@ -26,14 +26,14 @@ export const defaultConfig = {
   /** Places keep this distance from the region edges (× short). */
   PLACE_EDGE_MARGIN: 0.35,
   /** Minimum distance between places (× short). */
-  PLACE_MIN_DIST: 0.9,
+  PLACE_MIN_DIST: 1.6,
   /** Channel ordering: lateral offset of places from the centre line (× half width), its jitter (× half width). */
   PLACE_LATERAL: 0.3,
   PLACE_LATERAL_JITTER: 0.2,
   /** Vertical jitter of a place around its slot along the ascent (× screen height). */
   PLACE_JITTER: 0.1,
   /** The first place lies this many screens above the start (centre to centre). */
-  FIRST_PLACE_SCREENS: 0.85,
+  FIRST_PLACE_SCREENS: 1.2,
   /** A place emerges when the screen centre comes this close (× short). */
   EMERGE_DISTANCE: 0.6,
   /** Arrival (the stamp) at this distance (× short). */
@@ -178,6 +178,8 @@ export const defaultConfig = {
   TIERRA_PUSH_PX_PER_UNIT: 600,
   /** No line within this many screens of the region's entry (the first place comes before the first wall). */
   TIERRA_ENTRY_CLEAR: 1.9,
+  /** The entry title waits until the closing of the region below is this many screens out of view. */
+  TITLE_ENTRY_SCREENS: 0.8,
   /** Damage per crossing of a line, the cap one stroke can deal, healing per second and its grace delay. */
   TIERRA_DAMAGE_PER_CROSS: 0.15,
   TIERRA_STROKE_CAP: 0.4,
@@ -197,7 +199,7 @@ export const defaultConfig = {
   CORDILLERA_TENSION: 0.12,
   CORDILLERA_PULL_MIN_PX: 50,
   /** A stretch, in screens, and its weighty ease (time constant, ms). */
-  CORDILLERA_RUNG_SCREENS: 0.5,
+  CORDILLERA_RUNG_SCREENS: 0.65,
   CORDILLERA_RUNG_MS: 260,
   /** Fatigue: added per stretch; at full fatigue a stretch shrinks by FATIGUE_MAX; recovery per second of rest. */
   CORDILLERA_FATIGUE_PER_RUNG: 0.22,

@@ -59,7 +59,7 @@ describe('geography', () => {
       const w = buildWorld(VIEW_W, VIEW_H, cycle)
       const first = w.places.find((p) => p.n === 1)!
       const d = Math.hypot(first.x - w.start.x, first.y - w.start.y)
-      expect(d).toBeLessThanOrEqual(1.15 * VIEW_H)
+      expect(d).toBeLessThanOrEqual(1.5 * VIEW_H)
       expect(d).toBeGreaterThan(config.EMERGE_DISTANCE * w.short)
       // Out of the starting viewport.
       expect(first.y).toBeLessThan(w.start.y - VIEW_H / 2)
@@ -84,7 +84,7 @@ describe('geography', () => {
   it('stacks four channels, Mar at the bottom and Cielo at the top, with a threshold between each pair', () => {
     const w = buildWorld(VIEW_W, VIEW_H, 1)
     expect(w.regions.map((r) => r.id)).toEqual(['mar', 'tierra', 'cordillera', 'cielo'])
-    const heights = [5.5, 5, 5, 4.5].map((s) => Math.round(VIEW_H * s))
+    const heights = [5.5, 8, 8, 7.5].map((s) => Math.round(VIEW_H * s))
     expect(w.height).toBe(heights.reduce((a, b) => a + b, 0))
     expect(w.width).toBe(546)
     const mar = w.regions.find((r) => r.id === 'mar')!.rect

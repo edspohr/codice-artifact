@@ -20,29 +20,38 @@ export interface Crust {
   lines: CrustLine[]
 }
 
-/** Lines evenly spaced along the region with seeded jitter, clear of the bottom entry and the top threshold. */
-export function buildCrust(region: Rect, viewH: number, cycle: number, avoidY: readonly number[] = []): Crust {
+/**
+ * One fracture in the middle of each gap between consecutive places,
+ * starting after the region's first place, so the rhythm is even: a place,
+ * a wall, a place, a wall. Seeded jitter keeps it from reading as a grid,
+ * and never brings a line within the clearance of a text block.
+ */
+export function buildCrust(region: Rect, viewH: number, cycle: number, placeYs: readonly number[] = []): Crust {
   const random = rng(hashSeed('crust', cycle))
-  const count = Math.max(1, Math.round((region.h / viewH) * config.TIERRA_LINES_PER_SCREEN))
-  const top = region.y + viewH * 0.9
-  const bottom = region.y + region.h - viewH * config.TIERRA_ENTRY_CLEAR
-  const span = Math.max(0, bottom - top)
+  const ys = [...placeYs].sort((a, b) => b - a) // bottom first
+  const clearance = viewH * config.TIERRA_PLACE_CLEARANCE
   const lines: CrustLine[] = []
-  for (let i = 0; i < count; i++) {
-    const slot = count > 1 ? bottom - (i * span) / (count - 1) : (top + bottom) / 2
-    const jitter = (random() - 0.5) * viewH * 0.2
-    let y = Math.min(bottom, Math.max(top, slot + jitter))
-    // Keep clear of places: a line never crosses a text block.
-    const clearance = viewH * config.TIERRA_PLACE_CLEARANCE
-    for (let pass = 0; pass < 4; pass++) {
-      const near = avoidY.find((py) => Math.abs(py - y) < clearance)
-      if (near === undefined) break
-      y = near + (y >= near ? clearance : -clearance)
-    }
-    if (y < region.y + viewH * 0.6 || y > bottom) continue
+  for (let i = 0; i + 1 < ys.length; i++) {
+    const lower = ys[i]!
+    const upper = ys[i + 1]!
+    const mid = (lower + upper) / 2
+    const room = Math.max(0, (lower - upper) / 2 - clearance)
+    const y = mid + (random() - 0.5) * 2 * Math.min(room, viewH * 0.1)
+    if (lower - upper < 2 * clearance) continue
     lines.push({ y, seed: Math.floor(random() * 1000), integrity: 1, broken: false })
   }
-  lines.sort((a, b) => b.y - a.y) // bottom first
+  if (ys.length === 0) {
+    // No places given (tests): evenly spaced lines.
+    const count = Math.max(1, Math.round((region.h / viewH) * config.TIERRA_LINES_PER_SCREEN))
+    const top = region.y + viewH * 0.9
+    const bottom = region.y + region.h - viewH * config.TIERRA_ENTRY_CLEAR
+    for (let i = 0; i < count; i++) {
+      const slot = count > 1 ? bottom - (i * (bottom - top)) / (count - 1) : (top + bottom) / 2
+      const y = Math.min(bottom, Math.max(top, slot + (random() - 0.5) * viewH * 0.2))
+      lines.push({ y, seed: Math.floor(random() * 1000), integrity: 1, broken: false })
+    }
+  }
+  lines.sort((a, b) => b.y - a.y)
   return { lines }
 }
 

@@ -6,8 +6,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 3.4em;
-  height: 4.25em;
+  /* Sized to hold XVIII (≈2.45em) with a thin margin; 4:5. The numeral keeps its size. */
+  width: 2.65em;
+  height: 3.3em;
   font-size: var(--seal-size);
   background: var(--ink);
   /* Imperfect, hand-stamped edge: a fixed jagged polygon, no filters. */
@@ -37,7 +38,7 @@
   font-weight: 600;
   font-size: 1em;
   line-height: 1;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
   color: var(--paper);
   text-transform: uppercase;
 }

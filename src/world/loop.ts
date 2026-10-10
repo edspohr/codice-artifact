@@ -719,11 +719,13 @@ export class Territory {
     if (this.help !== prevHelp || this.holdStart !== null) active = true
     this.physics.helpBias = config.MAR_HELP_BIAS + (config.MAR_HELP_ACTIVE_BIAS - config.MAR_HELP_BIAS) * this.help
 
-    // Entering a region is a title event.
-    const region = regionAt(this.world, this.camera.y).id
-    if (territoryStore.get().region !== region) {
-      territoryStore.patch({ region })
-      this.showTitle(region, now)
+    // Entering a region is a title event, once the closing of the region below has left the screen.
+    const current = regionAt(this.world, this.camera.y)
+    if (territoryStore.get().region !== current.id) territoryStore.patch({ region: current.id })
+    if (!this.titlesShown.has(current.id)) {
+      const entry = current.rect.y + current.rect.h
+      const below = this.world.thresholds.some((t) => t.to === current.id)
+      if (!below || this.camera.y < entry - this.camera.viewH * config.TITLE_ENTRY_SCREENS) this.showTitle(current.id, now)
     }
 
     if (now - this.dipStart < config.STAMP_DIP_MS + 50) active = true

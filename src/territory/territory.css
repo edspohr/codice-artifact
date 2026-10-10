@@ -171,8 +171,11 @@
 
 .tally {
   display: flex;
-  gap: 0.9em;
-  font-size: calc(var(--seal-size) * 0.8);
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.45em;
+  max-width: calc(100vw - 2 * var(--gutter));
+  font-size: calc(var(--seal-size) * 0.72);
 }
 .tally .seal {
   font-size: 1em;
