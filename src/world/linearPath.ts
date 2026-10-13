@@ -83,7 +83,7 @@ export class LinearPath {
       case 'threshold': {
         // Frame the closing from inside the region being left: the band's centre is the boundary.
         const th = t.world.thresholds[stop.index]
-        if (th) t.glideTo({ x: th.band.x + th.band.w / 2, y: th.band.y + th.band.h / 2 + t.camera.viewH * 0.22 }, () => t.rest())
+        if (th) t.glideTo({ x: th.band.x + th.band.w / 2, y: th.band.y + th.band.h / 2 + t.camera.worldH * 0.22 }, () => t.rest())
         break
       }
     }

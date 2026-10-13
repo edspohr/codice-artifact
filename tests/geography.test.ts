@@ -87,7 +87,10 @@ describe('geography', () => {
     expect(w.regions.map((r) => r.id)).toEqual(['mar', 'tierra', 'cordillera', 'cielo'])
     const heights = [5.5, 8, 8, 7.5].map((s) => Math.round(VIEW_H * s))
     expect(w.height).toBe(heights.reduce((a, b) => a + b, 0))
-    expect(w.width).toBe(546)
+    // Mar and Tierra are channels; Cordillera and Cielo open wide, all on one centre line.
+    expect(w.regions.map((r) => r.rect.w)).toEqual([546, 546, 1170, 1560])
+    expect(w.width).toBe(1560)
+    for (const r of w.regions) expect(r.rect.x + r.rect.w / 2).toBe(780)
     const mar = w.regions.find((r) => r.id === 'mar')!.rect
     const cielo = w.regions.find((r) => r.id === 'cielo')!.rect
     expect(mar.y + mar.h).toBe(w.height)
@@ -109,7 +112,7 @@ describe('geography', () => {
       ['cordillera', 'cielo'],
     ])
     expect(w.thresholds.map((t) => t.fragments)).toEqual([[1, 2, 3, 4], [5, 6, 7, 8, 9, 10], [11, 12, 13, 14, 15, 16]])
-    expect(w.start).toEqual({ x: 273, y: w.height - 422 })
+    expect(w.start).toEqual({ x: 780, y: w.height - 422 })
     expect(regionAt(w, w.start.y).id).toBe('mar')
     expect(regionAt(w, 10).id).toBe('cielo')
   })

@@ -7,9 +7,13 @@ declare global {
       session: { patch(p: { keyboardUser?: boolean }): void }
       territory: {
         territory: {
-          camera: { x: number; y: number; clamp(): void }
+          camera: { x: number; y: number; scale: number; clamp(): void; toScreen(x: number, y: number): { x: number; y: number } }
+          physics: { grip: number; holding: unknown; slipping: 'slide' | 'fall' | null; secure(): void; onLedge(): boolean }
+          rest(): void
           world: {
             short: number
+            holds: Array<{ x: number; y: number; r: number }>
+            wind: Array<{ pts: Array<{ x: number; y: number }> }>
             places: Array<{ n: number; x: number; y: number }>
             regions: Array<{ id: string; rect: { x: number; y: number; w: number; h: number } }>
             thresholds: Array<{ from: string; to: string; band: { x: number; y: number; w: number; h: number } }>

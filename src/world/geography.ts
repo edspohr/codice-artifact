@@ -1,6 +1,7 @@
 // Places are a deterministic function of the cycle number. In a channel
 // they are loosely ordered along the ascent by canonical number, with
-// seeded jitter, alternating sides of the centre line. Order stays free:
+// seeded jitter, alternating sides of the centre line; in an open region
+// (Cordillera, Cielo) they scatter across its whole width. Order stays free:
 // nothing forces the visitor to take them in sequence. Constraints: inside
 // the region, off the edges, apart from each other, the first place about
 // one screen above the start, and fragment 22 at the far top of Cielo.
@@ -20,25 +21,32 @@ export interface GeographyInput {
   viewH: number
   /** Viewport width in px (the text block width depends on it). */
   viewW: number
+  /** View scale of the region (screen px per world px): distances that are felt on screen grow by its inverse. */
+  scale?: number
 }
 
 export function placePlaces(input: GeographyInput): Place[] {
-  const { cycle, region, rect, fragments, short, viewH, viewW } = input
+  const { cycle, region, rect, fragments, short } = input
+  const scale = input.scale ?? 1
+  // The view in world px: what one screen takes in at this region's scale.
+  const viewH = input.viewH / scale
+  const viewW = input.viewW / scale
   const random = rng(hashSeed('geo', cycle, region))
-  const margin = config.PLACE_EDGE_MARGIN * short
-  const minDist = config.PLACE_MIN_DIST * short
+  const margin = (config.PLACE_EDGE_MARGIN * short) / scale
+  const minDist = (config.PLACE_MIN_DIST * short) / scale
   const inner: Rect = { x: rect.x + margin, y: rect.y + margin, w: rect.w - 2 * margin, h: rect.h - 2 * margin }
   if (inner.w <= 0 || inner.h <= 0) throw new Error('geography: region too small for the edge margin')
 
   const centreX = rect.x + rect.w / 2
-  const halfW = inner.w / 2
   // A place's text block (see .place in territory.css: min(30rem, 74vw)) must fit
-  // inside the channel with a margin, so the viewpoint can frame it on arrival.
-  const textHalf = Math.min(240, 0.37 * viewW)
-  const fitMargin = textHalf + 40
+  // inside the region with a margin, so the viewpoint can frame it on arrival.
+  const textHalf = Math.min(240, 0.37 * input.viewW) / scale
+  const fitMargin = textHalf + 40 / scale
   // And the viewpoint must be able to centre on it: on a wide screen the channel is barely wider than the view.
   const minX = rect.x + Math.max(fitMargin, Math.min(rect.w / 2, viewW / 2))
   const maxX = rect.x + rect.w - Math.max(fitMargin, Math.min(rect.w / 2, viewW / 2))
+  const halfW = Math.max(0, (maxX - minX) / 2)
+  const open = rect.w >= viewW * 1.7
   const count = fragments.length
   // Slots along the ascent: the first about one screen above the start
   // (the start sits half a screen above the region's bottom), the last
@@ -49,12 +57,13 @@ export function placePlaces(input: GeographyInput): Place[] {
   // highest point the viewpoint can reach (half a screen below the top of the world).
   const hasExit = fragments.some((f) => f.n === 22)
   const topSlot = hasExit
-    ? Math.max(inner.y, rect.y + viewH / 2 + short * 0.08)
-    : inner.y + Math.max(short * 0.15, viewH * 1.05 - margin)
+    ? Math.max(inner.y, rect.y + viewH / 2 + (short * 0.08) / scale)
+    : inner.y + Math.max((short * 0.15) / scale, viewH * 1.05 - margin)
   const span = Math.max(0, bottomSlot - topSlot)
   const step = count > 1 ? span / (count - 1) : 0
-  // Places are spread along the ascent by their slots; the minimum distance never asks for more than the slots allow.
-  const minDistEff = count > 1 ? Math.min(minDist, step * 0.8) : minDist
+  // Places are spread along the ascent by their slots; the minimum distance never asks for more than the slots allow
+  // (in an open region the lateral spread adds room, so it can ask for more).
+  const minDistEff = count > 1 ? Math.min(minDist, step * (open ? 1.4 : 0.8)) : minDist
   let side = random() < 0.5 ? -1 : 1
 
   const placed: Place[] = []
@@ -67,8 +76,11 @@ export function placePlaces(input: GeographyInput): Place[] {
       const jitter = (random() - 0.5) * 2 * config.PLACE_JITTER * viewH * (1 - relax)
       // The exit only ever moves down from its slot: above it the viewpoint could not reach it.
       const jitterY = isExit ? Math.abs(jitter) : jitter
-      const lateral = (config.PLACE_LATERAL + (random() - 0.5) * 2 * config.PLACE_LATERAL_JITTER) * halfW
-      const x = Math.min(Math.min(inner.x + inner.w, maxX), Math.max(Math.max(inner.x, minX), centreX + side * lateral))
+      // A channel keeps places near its centre line; an open region scatters them over its width.
+      const lateral = open
+        ? (0.12 + random() * 0.88) * halfW
+        : (config.PLACE_LATERAL + (random() - 0.5) * 2 * config.PLACE_LATERAL_JITTER) * halfW
+      const x = isExit ? centreX + (random() - 0.5) * 0.2 * halfW : Math.min(maxX, Math.max(minX, centreX + side * lateral))
       const y = Math.min(inner.y + inner.h, Math.max(inner.y, slotY + jitterY))
       const ok = placed.every((p) => Math.hypot(p.x - x, p.y - y) >= minDistEff * (1 - relax * 0.5))
       if (ok) best = { x, y }

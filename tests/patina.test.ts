@@ -20,8 +20,8 @@ describe('patina grid and collector', () => {
     const c = new PatinaCollector(world, 844)
     expect(c.sessionId).toMatch(/^[0-9a-f]{32}$/)
     const y = mar.y + mar.h / 2
-    c.handled(100, y, 100 + 422, y) // half a screen of slip
-    c.lingered(100, y, 3)
+    c.handled(mar.x + 100, y, mar.x + 100 + 422, y) // half a screen of slip
+    c.lingered(mar.x + 100, y, 3)
     expect(c.isEmpty).toBe(false)
     const p = c.take(1)!
     expect(p.cycle).toBe(1)
@@ -37,7 +37,7 @@ describe('patina grid and collector', () => {
   it('sends nothing for a visit that did nothing, and nothing that is not aggregated', () => {
     const c = new PatinaCollector(world, 844)
     expect(c.take(1)).toBeNull()
-    c.handled(10, mar.y + 10, 30, mar.y + 10)
+    c.handled(mar.x + 10, mar.y + 10, mar.x + 30, mar.y + 10)
     const p = c.take(1)!
     // Only cells and amounts: no coordinates, no times, no order of events.
     expect(Object.keys(p)).toEqual(['cycle', 'sessionId', 'regions'])

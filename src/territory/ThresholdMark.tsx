@@ -13,7 +13,7 @@ export function ThresholdMark({ threshold, found }: { threshold: Threshold; foun
       data-threshold={threshold.from}
       data-movement={threshold.from}
       data-clear
-      style={{ left: `${threshold.band.x + threshold.band.w / 2}px`, top: `${threshold.band.y + threshold.band.h / 2}px` }}
+      style={{ ['--wx' as string]: `${threshold.band.x + threshold.band.w / 2}px`, ['--wy' as string]: `${threshold.band.y + threshold.band.h / 2}px` }}
     >
       <MovementTitle movement={movementById(threshold.from)} />
       <Tally threshold={threshold} found={found} />

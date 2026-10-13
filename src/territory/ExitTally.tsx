@@ -7,7 +7,7 @@ export function ExitTally({ world, exit, found }: { world: World; exit: Place; f
   const fragments = world.places.filter((p) => p.region === exit.region && p.n !== exit.n).map((p) => p.n).sort((a, b) => a - b)
   const threshold = { from: exit.region, to: exit.region, band: { x: exit.x, y: exit.y, w: 0, h: 0 }, fragments }
   return (
-    <div className="exit-tally" data-clear style={{ left: `${exit.x}px`, top: `${exit.y}px` }}>
+    <div className="exit-tally" data-clear style={{ ['--wx' as string]: `${exit.x}px`, ['--wy' as string]: `${exit.y}px` }}>
       <Tally threshold={threshold} found={found} />
     </div>
   )

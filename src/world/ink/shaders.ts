@@ -74,6 +74,55 @@ void main() {
 `
 
 /**
+ * Cordillera's holds sit in rock: a small ragged crag of mineral ink baked
+ * into the ground (R = ink) around each one, up to sixteen per pass. The
+ * knot itself is drawn crisp above the ink (see the loop's holds layer).
+ */
+export const HOLD_FRAG = `
+precision mediump float;
+varying vec2 vUv;
+uniform sampler2D uBase;
+uniform sampler2D uNoise;
+uniform vec4 uWorld;
+uniform vec4 uHolds[16];   // x, y, radius, seed (world px)
+uniform int uCount;
+uniform float uInk;
+void main() {
+  vec4 base = texture2D(uBase, vUv);
+  vec2 p = uWorld.xy + vUv * uWorld.zw;
+  float d = base.r;
+  for (int i = 0; i < 16; i++) {
+    if (i >= uCount) break;
+    vec4 h = uHolds[i];
+    vec2 q = p - h.xy;
+    if (abs(q.x) > h.z * 4.0 || abs(q.y) > h.z * 4.0) continue;
+    vec4 n = texture2D(uNoise, (q / (h.z * 2.6)) * 0.25 + h.w * 0.013);
+    float dist = length(q * vec2(1.0, 1.3));
+    float crag = 1.0 - smoothstep(h.z * 2.0, h.z * 3.4, dist * (0.75 + 0.5 * n.b));
+    d = max(d, crag * uInk * (0.8 + 0.25 * n.a));
+  }
+  gl_FragColor = vec4(d, base.gba);
+}
+`
+
+/**
+ * Cielo's air baked into the ground's spare channels: G, B = direction of
+ * the wind (encoded around 0.5), A = its strength (0..1). The composite
+ * shows it as moving smoke. The ink (R) is untouched.
+ */
+export const WIND_FRAG = `
+precision mediump float;
+varying vec2 vUv;
+uniform sampler2D uBase;
+uniform sampler2D uWind;   // RG = direction (encoded), B = strength, over the region
+void main() {
+  vec4 base = texture2D(uBase, vUv);
+  vec4 w = texture2D(uWind, vUv);
+  gl_FragColor = vec4(base.r, w.r, w.g, w.b);
+}
+`
+
+/**
  * Velocity + insistence. RG = velocity encoded around 0.5 (texels/s over
  * uVelMax), B = insistence. The brush is the finger's slip segment.
  */
@@ -200,6 +249,9 @@ uniform vec2 uPatinaParams; // strength, linger weight
 uniform float uShort;
 uniform vec4 uBandA;       // threshold band below: y, height, mass, enabled
 uniform vec4 uBandB;       // threshold band above: y, height, mass, enabled
+uniform vec3 uWall;        // beyond the region's sides: ink density, soft edge (px), enabled
+uniform vec4 uFar;         // far layer: strength, parallax (0 still..1 like the ground), kind (1 ridges, 2 clouds), zoom
+uniform vec3 uSmoke;       // the air as moving smoke: strength, time (s), enabled
 
 float formation(sampler2D img, vec4 place, vec2 p) {
   if (place.w <= 0.001) return 0.0;
@@ -261,6 +313,71 @@ void main() {
     d *= 1.0 - uPatinaParams.x * worn * (0.75 + 0.25 * n.b);
   }
 
+  // Beyond the sides of a narrow region (seen from a wider one across a threshold): rock walls, never paper.
+  if (uWall.z > 0.5) {
+    float outside = max(uWorld.x - p.x, p.x - (uWorld.x + uWorld.z));
+    float wall = uWall.x * (0.78 + 0.22 * n.r);
+    float k = smoothstep(-uWall.y, uWall.y, outside);
+    d = mix(d, max(d, wall), k);
+    g = mix(g, max(g, wall), k);
+  }
+
+  // Depth: a far layer behind the near ground, moving slower and seen from further off.
+  if (uFar.x > 0.0) {
+    vec2 c = uView.xy + uView.zw * 0.5;
+    vec2 q = c * (1.0 - uFar.y) + (p - c) * uFar.w;
+    float far = 0.0;
+    if (uFar.z < 1.5) {
+      // Ranges of mountains, one behind the other: a ragged ridgeline, ink fading below it.
+      float period = uShort * 2.4;
+      for (int k = 0; k < 3; k++) {
+        float fk = float(k);
+        float yy = q.y + fk * period * 0.37;
+        float band = floor(yy / period);
+        float local = yy - band * period;
+        float h = texture2D(uNoise, vec2(q.x / (uShort * 9.0) + band * 0.31 + fk * 0.17, 0.13 + fk * 0.29 + band * 0.07)).r * 0.65
+                + texture2D(uNoise, vec2(q.x / (uShort * 2.5) + band * 0.7, 0.53 + fk * 0.11)).g * 0.35;
+        float ridge = period * (0.15 + 0.5 * h);
+        float mass = smoothstep(ridge - uShort * 0.015, ridge + uShort * 0.01, local) * (1.0 - smoothstep(ridge, ridge + period * 0.5, local));
+        far = max(far, mass * (1.0 - 0.25 * fk));
+      }
+    } else {
+      // Banks of cloud, far off.
+      float a = texture2D(uNoise, q / (uShort * 14.0)).r * 0.65 + texture2D(uNoise, q / (uShort * 5.0) + 0.3).g * 0.35;
+      far = smoothstep(0.52, 0.78, a);
+    }
+    far *= 0.7 + 0.3 * n.b;
+    // Part of the ground, not of the visitor's mark: it never takes the accent.
+    d = 1.0 - (1.0 - d) * (1.0 - uFar.x * far);
+    g = 1.0 - (1.0 - g) * (1.0 - uFar.x * far);
+  }
+
+  // Cielo's air: smoke drawn out along the wind and drifting with it. Flow noise: the
+  // pattern is displaced along the wind in two phases that cross-fade, and smeared along
+  // it by a few taps, so it reads as wisps stretching, never as a texture sliding.
+  if (uSmoke.z > 0.5) {
+    vec4 gw = texture2D(uGround, uv);
+    float str = gw.a;
+    if (str > 0.02) {
+      vec2 dir = normalize((gw.gb - 0.5) * 2.0 + vec2(1e-4, 0.0));
+      vec2 q = p / (uShort * 0.9);
+      float ph = fract(uSmoke.y * 0.08);
+      float ph2 = fract(ph + 0.5);
+      float s1 = 0.0;
+      float s2 = 0.0;
+      for (int i = 0; i < 4; i++) {
+        float o = float(i) * 0.09;
+        s1 += texture2D(uNoise, (q - dir * (ph * 1.2 + o)) * 0.5).b;
+        s2 += texture2D(uNoise, (q - dir * (ph2 * 1.2 + o)) * 0.5 + 0.37).b;
+      }
+      float w1 = 1.0 - abs(1.0 - 2.0 * ph);
+      float smoke = (s1 * w1 + s2 * (1.0 - w1)) * 0.25;
+      float wisp = uSmoke.x * str * smoothstep(0.46, 0.74, smoke);
+      d = 1.0 - (1.0 - d) * (1.0 - wisp);
+      g = 1.0 - (1.0 - g) * (1.0 - wisp);
+    }
+  }
+
   float f = 0.0;
   f = 1.0 - (1.0 - f) * (1.0 - formation(uForm0, uPlace[0], p));
   f = 1.0 - (1.0 - f) * (1.0 - formation(uForm1, uPlace[1], p));
@@ -290,10 +407,6 @@ void main() {
   vec3 color = mix(uPaper, uInk, d);
   color = mix(color, uAccentColor, accent * (0.35 + 0.65 * d));
   color = mix(uPaper, color, uOpen);
-  // Beyond the field (only visible while looking back): paper, with a soft edge on the sides.
-  float edgeW = 40.0 / uWorld.z;
-  float inside = smoothstep(-edgeW, 0.0, uv.x) * (1.0 - smoothstep(1.0, 1.0 + edgeW, uv.x));
-  color = mix(uPaper, color, inside);
   gl_FragColor = vec4(color, 1.0);
 }
 `

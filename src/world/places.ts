@@ -2,6 +2,7 @@
 // leaves without arriving. Arrival stamps the seal; only a stamped place
 // stays for the session.
 import { config } from '../gestures/config'
+import { regionScale } from './scale'
 import type { Place, Vec2, World } from './types'
 
 export type PlaceState = 'hidden' | 'emerging' | 'present' | 'dispersing' | 'found'
@@ -48,10 +49,10 @@ export class Places {
 
   /** An emerged (emerging or present) unfound place near a point, if any. */
   emergedNear(from: Vec2): Vec2 | null {
-    const limit = config.EMERGE_DISTANCE * this.world.short * config.DISPERSE_HYSTERESIS
     for (const p of this.world.places) {
       const s = this.get(p.n)
       if (s.found || s.reveal <= 0) continue
+      const limit = (config.EMERGE_DISTANCE * this.world.short * config.DISPERSE_HYSTERESIS) / regionScale(p.region)
       if (Math.hypot(p.x - from.x, p.y - from.y) <= limit) return { x: p.x, y: p.y }
     }
     return null
@@ -84,24 +85,29 @@ export class Places {
     if (place) this.events.onStamp(place)
   }
 
-  /** Returns true while any reveal is animating. */
-  update(centre: Vec2, dt: number, now: number, revealAll: boolean): boolean {
+  /**
+   * Returns true while any reveal is animating. `suppress` (a title event is on
+   * screen): nothing emerges or arrives, and what had begun to emerge disperses.
+   */
+  update(centre: Vec2, dt: number, now: number, revealAll: boolean, suppress = false): boolean {
     const short = this.world.short
-    const emergeD = config.EMERGE_DISTANCE * short
-    const arriveD = config.ARRIVE_DISTANCE * short
     let animating = false
     for (const p of this.world.places) {
       const s = this.get(p.n)
+      // Distances are felt on screen: in a region seen from further off they grow in the world.
+      const k = 1 / regionScale(p.region)
+      const emergeD = config.EMERGE_DISTANCE * short * k
+      const arriveD = config.ARRIVE_DISTANCE * short * k
       const d = Math.hypot(p.x - centre.x, p.y - centre.y)
       // Hysteresis: once emerging or present, a place holds until the viewpoint is clearly away.
       const holding = s.reveal > 0 && d <= emergeD * config.DISPERSE_HYSTERESIS
-      const near = revealAll || d <= emergeD || holding
+      const near = !suppress && (revealAll || d <= emergeD || holding)
       const before = s.state
       const beforeReveal = s.reveal
 
       if (s.found) {
         s.reveal = 1
-      } else if (d <= arriveD) {
+      } else if (!suppress && d <= arriveD) {
         this.arrive(p.n, now)
         continue
       } else if (near) {

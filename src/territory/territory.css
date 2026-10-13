@@ -29,7 +29,9 @@
   pointer-events: none;
 }
 
+/* World positions follow the view scale (--s, set by the loop); the text itself is never scaled. */
 .world-text {
+  --s: 1;
   --sway-x: 0px;
   --sway-r: 0deg;
   --open: 0;
@@ -43,12 +45,45 @@
   opacity: var(--open);
 }
 
+.world-text > .place,
+.world-text > .threshold-mark,
+.world-text > .exit-tally {
+  left: calc(var(--wx, 0px) * var(--s));
+  top: calc(var(--wy, 0px) * var(--s));
+}
+
+/* --- Cordillera: the holds ---------------------------------------------------- */
+
+.holds {
+  position: absolute;
+  left: 0;
+  top: 0;
+  overflow: visible;
+  pointer-events: none;
+  transform: scale(var(--s));
+  transform-origin: 0 0;
+}
+.holds__knot {
+  fill: var(--ink);
+  opacity: 0.86;
+}
+.holds__lip {
+  fill: none;
+  stroke: var(--paper);
+  stroke-width: 1.6px;
+  stroke-linejoin: miter;
+  opacity: 0.45;
+}
+
 /* --- Tierra: the crust's fracture lines ---------------------------------------- */
 
 .crust {
   position: absolute;
   left: 0;
   top: 0;
+  /* Drawn in world px: only the drawing scales with the view, never text. */
+  transform: scale(var(--s));
+  transform-origin: 0 0;
   overflow: visible;
   pointer-events: none;
 }

@@ -5,9 +5,12 @@
 import type { MovementId } from '../../content/canon'
 import { config } from '../../gestures/config'
 import type { Place, Rect, World } from '../types'
+import { regionScale } from '../scale'
 import { bindTexture, createProgram, createQuad, createTexture, drawQuad, PingPong, type Program, type Target } from './gl'
 import { NOISE_SIZE, noiseTextureData } from './noise'
-import { ADVECT_FRAG, BAKE_FRAG, COMPOSITE_FRAG, GROUND_FRAG, SCAR_FRAG, VEL_FRAG, VERT } from './shaders'
+import { ADVECT_FRAG, BAKE_FRAG, COMPOSITE_FRAG, GROUND_FRAG, HOLD_FRAG, SCAR_FRAG, VEL_FRAG, VERT, WIND_FRAG } from './shaders'
+import { windAt } from '../wind'
+import type { Hold } from '../holds'
 
 const VEL_MAX = 900 // texels per second, the encoding range of the velocity texture
 
@@ -45,6 +48,12 @@ export interface Brush {
   vy: number
 }
 
+/** Per frame: the view scale (screen px per world px) and the time, for the far layer and the air. */
+export interface FrameUniform {
+  scale: number
+  timeS: number
+}
+
 export interface HelpUniform {
   x: number
   y: number
@@ -68,6 +77,8 @@ export class Ink {
   private progGround: Program
   private progBake: Program
   private progScar: Program
+  private progHold: Program
+  private progWind: Program
   private progVel: Program
   private progAdvect: Program
   private progComposite: Program
@@ -96,6 +107,8 @@ export class Ink {
     this.progGround = createProgram(gl, VERT, GROUND_FRAG, ['uImage', 'uWorld', 'uRegion'])
     this.progBake = createProgram(gl, VERT, BAKE_FRAG, ['uBase', 'uImage', 'uWorld', 'uPlace'])
     this.progScar = createProgram(gl, VERT, SCAR_FRAG, ['uBase', 'uNoise', 'uWorld', 'uScar', 'uStrength', 'uNoiseScale'])
+    this.progHold = createProgram(gl, VERT, HOLD_FRAG, ['uBase', 'uNoise', 'uWorld', 'uHolds[0]', 'uCount', 'uInk'])
+    this.progWind = createProgram(gl, VERT, WIND_FRAG, ['uBase', 'uWind'])
     this.progVel = createProgram(gl, VERT, VEL_FRAG, [
       'uVI', 'uSim', 'uDt', 'uVelDecay', 'uVelMax', 'uBrushOn', 'uBrush', 'uBrushVel', 'uBrushRadius', 'uBrushStrength', 'uInsRate', 'uInsDecay',
     ])
@@ -106,6 +119,7 @@ export class Ink {
       'uDensity', 'uGround', 'uVI', 'uNoise', 'uForm0', 'uForm1', 'uForm2', 'uForm3',
       'uPlace[0]', 'uView', 'uWorld', 'uOpen', 'uPaper', 'uInk', 'uAccentColor', 'uAccent',
       'uClear[0]', 'uClearCount', 'uClearParams', 'uClearResidual', 'uNoiseScale', 'uHelp', 'uGrain', 'uShort', 'uBandA', 'uBandB', 'uHelpBoost', 'uPatina', 'uPatinaParams',
+      'uWall', 'uFar', 'uSmoke',
     ])
     this.noise = createTexture(gl, NOISE_SIZE, NOISE_SIZE, noiseTextureData(), gl.REPEAT)
     for (const [id, img] of assets.grounds) this.groundImg.set(id, createTexture(gl, 0, 0, img))
@@ -127,7 +141,63 @@ export class Ink {
       this.sims.push(sim)
       this.initGround(sim)
       this.initVI(sim)
+      if (sim.id === 'cordillera') this.bakeHolds(sim, world.holds)
+      if (sim.id === 'cielo') this.bakeWind(sim)
     }
+  }
+
+  /** Cordillera's holds become part of its rock (ground and current ink), sixteen per pass. */
+  private bakeHolds(sim: RegionSim, holds: readonly Hold[]) {
+    const gl = this.gl
+    const u = this.progHold.uniforms
+    for (let start = 0; start < holds.length; start += 16) {
+      const batch = holds.slice(start, start + 16)
+      const data = new Float32Array(64)
+      batch.forEach((h, i) => data.set([h.x, h.y, h.r, h.seed], i * 4))
+      for (const pp of [sim.ground, sim.density]) {
+        this.target(pp.write)
+        gl.useProgram(this.progHold.program)
+        bindTexture(gl, 0, pp.read.tex, u.uBase ?? null)
+        bindTexture(gl, 1, this.noise, u.uNoise ?? null)
+        gl.uniform4f(u.uWorld ?? null, ...this.regionVec(sim))
+        gl.uniform4fv(u['uHolds[0]'] ?? null, data)
+        gl.uniform1i(u.uCount ?? null, batch.length)
+        gl.uniform1f(u.uInk ?? null, config.CORDILLERA_HOLD_INK)
+        drawQuad(gl, this.quad, this.progHold.attrib)
+        pp.swap()
+      }
+    }
+  }
+
+  /** Cielo's air, sampled once over the region, baked into the ground's spare channels. */
+  private bakeWind(sim: RegionSim) {
+    const gl = this.gl
+    const w = 64
+    const h = Math.max(8, Math.min(512, Math.round((w * sim.rect.h) / sim.rect.w)))
+    const max = Math.max(config.CIELO_WIND_SPEED, config.CIELO_THERMAL_SPEED) / 1000
+    const data = new Uint8Array(w * h * 4)
+    for (let j = 0; j < h; j++) {
+      for (let i = 0; i < w; i++) {
+        const x = sim.rect.x + ((i + 0.5) / w) * sim.rect.w
+        const y = sim.rect.y + ((j + 0.5) / h) * sim.rect.h
+        const v = windAt(this.world.wind, x, y)
+        const m = Math.hypot(v.x, v.y)
+        const k = (j * w + i) * 4
+        data[k] = Math.round(255 * (0.5 + (m > 0 ? v.x / m : 0) * 0.5))
+        data[k + 1] = Math.round(255 * (0.5 + (m > 0 ? v.y / m : 0) * 0.5))
+        data[k + 2] = Math.round(255 * Math.min(1, m / max))
+        data[k + 3] = 255
+      }
+    }
+    const tex = createTexture(gl, w, h, data)
+    const u = this.progWind.uniforms
+    this.target(sim.ground.write)
+    gl.useProgram(this.progWind.program)
+    bindTexture(gl, 0, sim.ground.read.tex, u.uBase ?? null)
+    bindTexture(gl, 1, tex, u.uWind ?? null)
+    drawQuad(gl, this.quad, this.progWind.attrib)
+    sim.ground.swap()
+    gl.deleteTexture(tex)
   }
 
   get isLost() {
@@ -215,7 +285,8 @@ export class Ink {
       bindTexture(gl, 0, pp.read.tex, this.progScar.uniforms.uBase ?? null)
       bindTexture(gl, 1, this.noise, this.progScar.uniforms.uNoise ?? null)
       gl.uniform4f(this.progScar.uniforms.uWorld ?? null, ...this.regionVec(sim))
-      gl.uniform4f(this.progScar.uniforms.uScar ?? null, place.x, place.y, config.SCAR_RADIUS * short, config.SCAR_WIDTH * short)
+      const k = 1 / regionScale(place.region)
+      gl.uniform4f(this.progScar.uniforms.uScar ?? null, place.x, place.y, config.SCAR_RADIUS * short * k, config.SCAR_WIDTH * short * k)
       gl.uniform1f(this.progScar.uniforms.uStrength ?? null, config.SCAR_STRENGTH)
       gl.uniform1f(this.progScar.uniforms.uNoiseScale ?? null, short * 0.5)
       drawQuad(gl, this.quad, this.progScar.attrib)
@@ -228,12 +299,14 @@ export class Ink {
    * finger's slip segment in world px with its velocity in world px/s, or
    * null when nothing is touching. `dirt` is the number of stamps so far.
    */
-  step(dtSeconds: number, brush: Brush | null, dirt: number, view: Rect) {
+  step(dtSeconds: number, brush: Brush | null, dirt: number, view: Rect, scale = 1) {
     const dt = Math.min(0.05, Math.max(0.0005, dtSeconds))
-    for (const sim of this.simsTouching(view)) this.stepRegion(sim, dt, brush, dirt)
+    // The finger is the same size on screen whatever the view takes in.
+    const radius = (config.BRUSH_RADIUS * this.world.short) / Math.max(0.1, scale)
+    for (const sim of this.simsTouching(view)) this.stepRegion(sim, dt, brush, dirt, radius)
   }
 
-  private stepRegion(sim: RegionSim, dt: number, brush: Brush | null, dirt: number) {
+  private stepRegion(sim: RegionSim, dt: number, brush: Brush | null, dirt: number, brushRadius: number) {
     const gl = this.gl
     const sx = sim.simW / sim.rect.w
     const sy = sim.simH / sim.rect.h
@@ -257,7 +330,7 @@ export class Ink {
       gl.uniform4f(u.uBrush ?? null, 0, 0, 0, 0)
       gl.uniform2f(u.uBrushVel ?? null, 0, 0)
     }
-    gl.uniform1f(u.uBrushRadius ?? null, config.BRUSH_RADIUS * this.world.short * sx)
+    gl.uniform1f(u.uBrushRadius ?? null, brushRadius * sx)
     gl.uniform1f(u.uBrushStrength ?? null, config.BRUSH_STRENGTH)
     gl.uniform1f(u.uInsRate ?? null, config.INSISTENCE_RATE * (1 + config.DIRT_ACCENT * dirt))
     gl.uniform1f(u.uInsDecay ?? null, config.INSISTENCE_DECAY)
@@ -280,7 +353,7 @@ export class Ink {
       const q = local(brush.bx, brush.by)
       gl.uniform4f(a.uBrush ?? null, p[0], p[1], q[0], q[1])
     } else gl.uniform4f(a.uBrush ?? null, 0, 0, 0, 0)
-    gl.uniform1f(a.uBrushRadius ?? null, config.BRUSH_RADIUS * this.world.short * sx)
+    gl.uniform1f(a.uBrushRadius ?? null, brushRadius * sx)
     gl.uniform1f(a.uFurrow ?? null, config.FURROW_STRENGTH)
     gl.uniform1f(a.uDeposit ?? null, Math.min(0.6, config.DIRT_PER_STAMP * dirt))
     drawQuad(gl, this.quad, this.progAdvect.attrib)
@@ -292,7 +365,7 @@ export class Ink {
    * rows). `view` is the camera rect in world px; `help` is the nearest
    * unfound place with the effective bias and the grain boost.
    */
-  render(view: Rect, open: number, places: PlaceUniform[], clears: ClearBox[], help: HelpUniform | null) {
+  render(view: Rect, open: number, places: PlaceUniform[], clears: ClearBox[], help: HelpUniform | null, frame: FrameUniform = { scale: 1, timeS: 0 }) {
     const gl = this.gl
     const canvas = this.canvas
     gl.bindFramebuffer(gl.FRAMEBUFFER, null)
@@ -309,12 +382,12 @@ export class Ink {
       const bottomPx = Math.min(canvas.height, Math.ceil((sim.rect.y + sim.rect.h - view.y) * pxPerWorld))
       if (bottomPx <= topPx) continue
       gl.scissor(0, canvas.height - bottomPx, canvas.width, bottomPx - topPx)
-      this.composite(sim, view, open, places, clears, help)
+      this.composite(sim, view, open, places, clears, help, frame)
     }
     gl.disable(gl.SCISSOR_TEST)
   }
 
-  private composite(sim: RegionSim, view: Rect, open: number, places: PlaceUniform[], clears: ClearBox[], help: HelpUniform | null) {
+  private composite(sim: RegionSim, view: Rect, open: number, places: PlaceUniform[], clears: ClearBox[], help: HelpUniform | null, frame: FrameUniform) {
     const gl = this.gl
     const u = this.progComposite.uniforms
     gl.useProgram(this.progComposite.program)
@@ -373,6 +446,14 @@ export class Ink {
     const on = config.THRESHOLD_MASS > 0
     gl.uniform4f(u.uBandA ?? null, below ? below.band.y : 0, below ? below.band.h : 1, config.THRESHOLD_MASS, below && on ? 1 : 0)
     gl.uniform4f(u.uBandB ?? null, above ? above.band.y : 0, above ? above.band.h : 1, config.THRESHOLD_MASS, above && on ? 1 : 0)
+    // Beyond a narrow region's sides: its rock walls. The far layer and the air, by region.
+    const narrower = sim.rect.w < this.world.width - 1
+    const wall = sim.id === 'mar' ? 0.92 : sim.id === 'tierra' ? 0.85 : sim.id === 'cordillera' ? 0.6 : 0.15
+    gl.uniform3f(u.uWall ?? null, wall, short * 0.12, narrower ? 1 : 0)
+    const kind = sim.id === 'cordillera' ? 1 : sim.id === 'cielo' ? 2 : 0
+    const farStrength = kind === 0 ? 0 : config.FAR_STRENGTH * (kind === 2 ? 0.6 : 1)
+    gl.uniform4f(u.uFar ?? null, farStrength, Math.max(0, Math.min(1, config.FAR_DEPTH)), kind, Math.sqrt(Math.max(0.1, frame.scale)))
+    gl.uniform3f(u.uSmoke ?? null, config.CIELO_SMOKE_STRENGTH, frame.timeS, sim.id === 'cielo' && config.CIELO_SMOKE_STRENGTH > 0 ? 1 : 0)
     drawQuad(gl, this.quad, this.progComposite.attrib)
   }
 

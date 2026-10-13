@@ -26,8 +26,8 @@ export function PlaceText({ place, status }: { place: Place; status: PlaceStatus
       data-state={status.state}
       data-found={status.found ? '' : undefined}
       style={{
-        left: `${place.x}px`,
-        top: `${place.y}px`,
+        ['--wx' as string]: `${place.x}px`,
+        ['--wy' as string]: `${place.y}px`,
         ['--emerge-ms' as string]: `${config.EMERGE_MS}ms`,
         ['--disperse-ms' as string]: `${config.DISPERSE_MS}ms`,
         ['--clear-open-ms' as string]: `${config.CLEAR_OPEN_MS}ms`,

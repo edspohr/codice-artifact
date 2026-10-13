@@ -13,14 +13,33 @@ export const defaultConfig = {
   // =====================================================================
 
   // --- world ---
-  /** Each region is a channel: lateral play, but the way is up. Width and heights in screens. */
+  /** Mar and Tierra are channels: lateral play, but the way is up. Cordillera and Cielo open
+   *  into a massif and a sky, wider than they are tall in the visitor's sense of space.
+   *  Widths and heights in screens (a portrait unit). */
   MAR_SCREENS_W: 1.4,
+  TIERRA_SCREENS_W: 1.4,
+  CORDILLERA_SCREENS_W: 3,
+  CIELO_SCREENS_W: 4,
   MAR_SCREENS_H: 5.5,
   TIERRA_SCREENS_H: 8,
   CORDILLERA_SCREENS_H: 8,
   CIELO_SCREENS_H: 7.5,
   /** On wide screens the world is at least this many viewport widths, so ink covers the whole view. */
   WORLD_MIN_VIEW_WIDTHS: 1.15,
+  /** Cordillera and Cielo are at least this many views wide, so a wide screen still finds them open. */
+  OPEN_MIN_VIEW_WIDTHS: 1.8,
+  /** The view takes in more of the world as the territory opens (world px per screen px drop below 1).
+   *  Ink and distances look smaller; DOM text keeps its size. Changes gradually across a threshold. */
+  MAR_VIEW_SCALE: 1,
+  TIERRA_VIEW_SCALE: 1,
+  CORDILLERA_VIEW_SCALE: 0.8,
+  CIELO_VIEW_SCALE: 0.65,
+  /** The change of scale is spread over this many screens, centred on the boundary. */
+  VIEW_SCALE_TRANSITION_SCREENS: 1.4,
+  /** Depth: a far layer of ink behind the near ground, moving slower (0 moves with the ground, 1 stays still),
+   *  and how strongly it reads (0 disables). Mountains far off in Cordillera, cloud banks in Cielo. */
+  FAR_DEPTH: 0.55,
+  FAR_STRENGTH: 0.22,
   /** Wheel / trackpad: world px per wheel px (desktop drift). */
   WHEEL_GAIN: 0.9,
   /** Places keep this distance from the region edges (× short). */
@@ -192,27 +211,50 @@ export const defaultConfig = {
   /** Text shears along nearby damaged lines (degrees at full damage). */
   TIERRA_SHEAR_DEG: 2.5,
 
-  // --- Cordillera: climbing by stretches ---
-  /** Lateral traction. No inertia, no current. */
-  CORDILLERA_TRACTION: 0.6,
-  /** While pulling up, the rock barely gives (tension). Releasing a pull of at least PULL_MIN px lifts one stretch. */
-  CORDILLERA_TENSION: 0.12,
-  CORDILLERA_PULL_MIN_PX: 50,
-  /** A stretch, in screens, and its weighty ease (time constant, ms). */
-  CORDILLERA_RUNG_SCREENS: 0.65,
-  CORDILLERA_RUNG_MS: 260,
-  /** Fatigue: added per stretch; at full fatigue a stretch shrinks by FATIGUE_MAX; recovery per second of rest. */
-  CORDILLERA_FATIGUE_PER_RUNG: 0.22,
-  CORDILLERA_FATIGUE_MAX: 0.7,
-  CORDILLERA_RECOVER_PER_S: 0.35,
+  // --- Cordillera: climbing from hold to hold ---
+  /** Bare rock: little traction; a drag that is not on a hold slides, and on release the visitor slips back to the last hold. */
+  CORDILLERA_TRACTION: 0.25,
+  /** Holds: knots of mineral ink. A touch within GRIP_RADIUS (× short, on screen) grips one; while gripped the
+   *  world follows the finger with weight (lag, ms). Reach: one grip lifts at most REACH screens before tension. */
+  CORDILLERA_GRIP_RADIUS: 0.11,
+  CORDILLERA_GRIP_LAG_MS: 140,
+  CORDILLERA_REACH_SCREENS: 0.6,
+  /** Holds are laid in routes up the massif: steps between holds (screens, on screen) and the number of routes. */
+  CORDILLERA_HOLD_STEP_MIN: 0.2,
+  CORDILLERA_HOLD_STEP_MAX: 0.34,
+  CORDILLERA_ROUTES: 3,
+  /** Size of a hold's knot (× short, on screen) and the ink of the crag around it (0..1). */
+  CORDILLERA_HOLD_RADIUS: 0.04,
+  CORDILLERA_HOLD_INK: 0.42,
+  /** Grip (0..1, never shown): hanging off a ledge drains it per second, lifting drains it per screen climbed;
+   *  on a ledge (a place, the entry, the threshold) it recovers per second. Low grip weakens the pull and the
+   *  hand creeps down (px/s at empty); empty, the visitor slips down to the last ledge (ms). */
+  CORDILLERA_HANG_DRAIN_PER_S: 0.02,
+  CORDILLERA_CLIMB_COST_PER_SCREEN: 0.14,
+  CORDILLERA_RECOVER_PER_S: 0.3,
+  CORDILLERA_LOW_GRIP: 0.3,
+  CORDILLERA_CREEP_PX_S: 14,
+  CORDILLERA_FALL_MS: 1100,
+  /** A ledge: within this distance of a place (× short, on screen). */
+  CORDILLERA_LEDGE_DISTANCE: 0.5,
 
-  // --- Cielo: release ---
-  /** Little traction; a flick sets a drift (gain on release) that stillness sustains. */
-  CIELO_TRACTION: 0.25,
+  // --- Cielo: let the air carry you ---
+  /** Little traction; a flick sets a drift that slows to a minimum and only a touch stops. */
+  CIELO_TRACTION: 0.18,
   CIELO_FLICK_GAIN: 2.5,
-  /** The drift slows (per ms) to a minimum speed (px/s) and only a touch stops it. */
   CIELO_FRICTION: 0.0008,
-  CIELO_MIN_SPEED: 12,
+  CIELO_MIN_SPEED: 10,
+  /** Wind streams cross the open sky and thermals rise; inside one the visitor is carried (px/s of world,
+   *  stream half width × short, adoption per s). Near an emerged text the air calms (multiplier). */
+  CIELO_WIND_SPEED: 70,
+  CIELO_THERMAL_SPEED: 55,
+  CIELO_WIND_WIDTH: 0.3,
+  CIELO_WIND_ADOPT: 2.5,
+  CIELO_WIND_NEAR_PLACE: 0.12,
+  /** Streams that lead nowhere in particular, branching off the main air (count). */
+  CIELO_STRAY_STREAMS: 3,
+  /** How the moving smoke of the wind reads (0 disables). */
+  CIELO_SMOKE_STRENGTH: 0.2,
   /** Text in Cielo thins with height down to this alpha (never below the contrast floor). */
   CIELO_TEXT_MIN_ALPHA: 0.66,
 

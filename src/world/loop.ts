@@ -18,6 +18,7 @@ import type { MovementId } from '../content/canon'
 import type { Place, Rect, Vec2, World } from './types'
 import { fragmentWords } from './reading'
 import { hashSeed, rng } from './rng'
+import { regionScale } from './scale'
 import { regionAt } from './world'
 
 export interface TerritoryElements {
@@ -81,6 +82,7 @@ export class Territory {
   private settleTries = 0
   private resting = false
   private departAccum = 0
+  private touchOrigin: DragSample | null = null
   /** The stamp lands with a short dip of the viewpoint. */
   private dipStart = -Infinity
   // Tierra's crust: fracture lines that block the way up until broken by insistence.
@@ -117,6 +119,7 @@ export class Territory {
       this.crust = new CrustState(buildCrust(tierra.rect, this.screenH, this.world.cycle, avoid))
       this.buildCrustSvg()
     }
+    if (this.world.holds.length) this.buildHoldsSvg()
     this.resize()
     this.input.attach(els.stage, {
       onStart: (s) => this.onStart(s),
@@ -213,6 +216,44 @@ export class Territory {
     }
     this.els.textLayer.insertBefore(svg, this.els.textLayer.firstChild)
     this.crustSvg = svg
+  }
+
+  /**
+   * Cordillera's holds: knots of mineral ink, crisp above the ground, each an
+   * irregular seeded shape with a pale weathered lip on top. Part of the rock,
+   * never a mark of an interface.
+   */
+  private buildHoldsSvg() {
+    const NS = 'http://www.w3.org/2000/svg'
+    const svg = document.createElementNS(NS, 'svg')
+    svg.setAttribute('class', 'holds')
+    svg.setAttribute('aria-hidden', 'true')
+    svg.setAttribute('width', String(this.world.width))
+    svg.setAttribute('height', String(this.world.height))
+    const f = (n: number) => n.toFixed(1)
+    for (const h of this.world.holds) {
+      const random = rng(hashSeed('hold', this.world.cycle, h.seed, Math.round(h.x), Math.round(h.y)))
+      const count = 9 + Math.floor(random() * 4)
+      const pts: Array<{ x: number; y: number }> = []
+      for (let i = 0; i < count; i++) {
+        const a = (i / count) * Math.PI * 2 + (random() - 0.5) * 0.4
+        const r = h.r * (0.62 + random() * 0.5)
+        pts.push({ x: h.x + Math.cos(a) * r, y: h.y + Math.sin(a) * r * 0.78 })
+      }
+      const body = document.createElementNS(NS, 'path')
+      body.setAttribute('d', 'M' + pts.map((p) => `${f(p.x)},${f(p.y)}`).join(' L') + ' Z')
+      body.setAttribute('class', 'holds__knot')
+      svg.appendChild(body)
+      // The lip: the upper edge, worn pale.
+      const top = pts.filter((p) => p.y < h.y - h.r * 0.15).sort((a, b) => a.x - b.x)
+      if (top.length > 1) {
+        const lip = document.createElementNS(NS, 'path')
+        lip.setAttribute('d', 'M' + top.map((p) => `${f(p.x)},${f(p.y + h.r * 0.12)}`).join(' L'))
+        lip.setAttribute('class', 'holds__lip')
+        svg.appendChild(lip)
+      }
+    }
+    this.els.textLayer.insertBefore(svg, this.els.textLayer.firstChild)
   }
 
   /**
@@ -353,7 +394,7 @@ export class Territory {
     const now = performance.now()
     this.openTerritory(now)
     if (s && this.input.down) {
-      this.physics.touchStart(now)
+      this.physics.touchStart(now, s.x, s.y)
       this.holdStart = null
       this.lastDragT = s.t
       this.sound.noteOn(this.height())
@@ -387,10 +428,11 @@ export class Territory {
       return
     }
     this.departAccum = 0
+    this.touchOrigin = s
     this.holdStart = now
     this.holdMoved = 0
     this.crust?.strokeStart()
-    if (!this.resting) this.physics.touchStart(now)
+    if (!this.resting) this.physics.touchStart(now, s.x, s.y)
     this.lastDragT = s.t
     this.sound.noteOn(this.height())
     this.wake()
@@ -419,7 +461,9 @@ export class Territory {
       this.departAccum += Math.hypot(s.x - prev.x, s.y - prev.y)
       if (this.departAccum < config.DEPART_PX) return
       this.resting = false
-      this.physics.touchStart(s.t)
+      // The grip is taken where the finger came down (a hold under it), not where the departure began.
+      const origin = this.touchOrigin ?? s
+      this.physics.touchStart(s.t, origin.x, origin.y)
     }
     const yBefore = this.camera.y
     const slip = this.physics.drag(s.x, s.y, s.x - prev.x, s.y - prev.y, dt, s.t)
@@ -478,7 +522,7 @@ export class Territory {
     }
     this.sound.stamp(this.height())
     this.dipStart = performance.now()
-    this.ink.bake(place, config.FORMATION_RADIUS * this.world.short)
+    this.ink.bake(place, (config.FORMATION_RADIUS * this.world.short) / regionScale(place.region))
     // The cost of finding: the ground scars around the place, the hands get dirtier.
     if (config.SCAR_STRENGTH > 0) this.ink.scar(place)
     this.dirt += 1
@@ -526,7 +570,8 @@ export class Territory {
     }
     const reduced = session.get().reducedMotion
     const from = { x: this.camera.x, y: this.camera.y }
-    const to = { x: this.camera.x + dx, y: this.camera.y + dy }
+    // Measured on screen; the viewpoint moves in the world.
+    const to = { x: this.camera.x + dx / this.camera.scale, y: this.camera.y + dy / this.camera.scale }
     this.glide = {
       from,
       to,
@@ -534,6 +579,7 @@ export class Territory {
       duration: reduced ? 0 : config.SETTLE_MS,
       onDone: () => {
         this.resting = true
+        this.physics.secure()
         // Fragment 22 is the exit: at rest there, the reading dwell begins.
         const exitPlace = this.world.places.find((p) => p.n === 22)
         if (exitPlace && n === exitPlace.n) this.exit.arrive(performance.now(), fragmentWords(exitPlace.fragment))
@@ -579,6 +625,7 @@ export class Territory {
     this.camera.vx = 0
     this.camera.vy = 0
     this.resting = true
+    this.physics.secure()
   }
 
   /** Come to rest at a place (even one stamped earlier, or stamped while gliding in). */
@@ -616,7 +663,8 @@ export class Territory {
       if (r.width === 0 || r.height === 0) continue
       if (r.bottom < stage.top - margin || r.top > stage.bottom + margin || r.right < stage.left || r.left > stage.right) continue
       const w = this.camera.toWorld(r.left - stage.left + r.width / 2, r.top - stage.top + r.height / 2)
-      out.push({ cx: w.x, cy: w.y, hw: r.width / 2, hh: r.height / 2, d: Math.hypot(r.left + r.width / 2 - cx, r.top + r.height / 2 - cy) })
+      const k = 1 / this.camera.scale
+      out.push({ cx: w.x, cy: w.y, hw: (r.width / 2) * k, hh: (r.height / 2) * k, d: Math.hypot(r.left + r.width / 2 - cx, r.top + r.height / 2 - cy) })
     }
     out.sort((a, b) => a.d - b.d)
     this.clears = out.slice(0, 8).map(({ d: _d, ...c }) => c)
@@ -697,13 +745,17 @@ export class Territory {
         this.camera.clamp()
         if (t >= 1) {
           this.glide = null
+          this.physics.secure()
           g.onDone?.()
         } else active = true
       }
     } else if (this.resting) {
-      // Stillness at the place: nothing moves until a deliberate drag.
+      // Stillness at the place: nothing moves until a deliberate drag. A place is a ledge: the grip recovers.
+      if (this.physics.recover(dt)) active = true
     } else if (this.input.down) {
       active = true
+      // Cordillera wears the grip while the visitor hangs on.
+      this.physics.step(dt, now, null)
     } else {
       const centre = { x: this.camera.x, y: this.camera.y }
       const emerged = this.places.emergedNear(centre)
@@ -736,14 +788,15 @@ export class Territory {
     if (!this.titlesShown.has(current.id)) {
       const entry = current.rect.y + current.rect.h
       const below = this.world.thresholds.some((t) => t.to === current.id)
-      if (!below || this.camera.y < entry - this.camera.viewH * config.TITLE_ENTRY_SCREENS) this.showTitle(current.id, now)
+      if (!below || this.camera.y < entry - this.camera.worldH * config.TITLE_ENTRY_SCREENS) this.showTitle(current.id, now)
     }
 
     if (now - this.dipStart < config.STAMP_DIP_MS + 50) active = true
 
-    // Places: nothing emerges while a title is on screen.
-    if ((this.open > 0 || this.revealAll) && !this.titleActive) {
-      if (this.places.update({ x: this.camera.x, y: this.camera.y }, dt, now, this.revealAll)) active = true
+    // Places: nothing emerges while a title is on screen, and what had begun to emerge disperses.
+    if (this.open > 0 || this.revealAll) {
+      const suppress = this.titleActive && !this.revealAll
+      if (this.places.update({ x: this.camera.x, y: this.camera.y }, dt, now, this.revealAll, suppress)) active = true
     }
 
     // Ink.
@@ -755,7 +808,9 @@ export class Territory {
     if (brush && this.open <= 0 && !this.opening) {
       // The first mark before the white opens still lands in the field.
     }
-    this.ink.step(dt / 1000, brush, this.dirt, this.viewRect())
+    this.ink.step(dt / 1000, brush, this.dirt, this.viewRect(), this.camera.scale)
+    // Cielo's air moves as smoke: while it is in view, the loop stays awake.
+    if (config.CIELO_SMOKE_STRENGTH > 0 && this.cieloInView()) active = true
     // This visit's wear, aggregated into the patina grid (never sent as strokes).
     if (brush && territoryStore.get().phase === 'territory') this.patina.collector.handled(brush.ax, brush.ay, brush.bx, brush.by)
     if (territoryStore.get().phase === 'territory' && this.exit.current === 'idle') {
@@ -785,7 +840,7 @@ export class Territory {
       this.idleTimer = window.setTimeout(() => {
         this.idleTimer = 0
         this.lastFrame = performance.now()
-        this.ink.step(0.25, null, this.dirt, this.viewRect())
+        this.ink.step(0.25, null, this.dirt, this.viewRect(), this.camera.scale)
         this.render()
         if (!this.destroyed) this.idleTimer = window.setTimeout(() => this.wake(), 250)
       }, 250)
@@ -803,7 +858,13 @@ export class Territory {
   private syncDom() {
     const layer = this.els.textLayer
     const dip = this.dip(performance.now())
-    layer.style.transform = `translate3d(${(-this.camera.left).toFixed(2)}px, ${(-(this.camera.top + dip)).toFixed(2)}px, 0)`
+    // Positions follow the world at the view scale; the text itself is never scaled.
+    const s = this.camera.scale
+    layer.style.transform = `translate3d(${(-this.camera.left * s).toFixed(2)}px, ${(-(this.camera.top * s + dip)).toFixed(2)}px, 0)`
+    if (s !== this.lastScale) {
+      layer.style.setProperty('--s', s.toFixed(4))
+      this.lastScale = s
+    }
     const reduced = session.get().reducedMotion
     layer.style.setProperty('--sway-x', reduced ? '0px' : `${this.sway.x.toFixed(2)}px`)
     layer.style.setProperty('--sway-r', reduced ? '0deg' : `${this.sway.r.toFixed(3)}deg`)
@@ -847,26 +908,37 @@ export class Territory {
     if (this.ink.isLost) return
     const placeUniforms = this.world.places.map((p) => {
       const s = this.places.get(p.n)
-      return { x: p.x, y: p.y, radius: config.FORMATION_RADIUS * this.world.short, reveal: s.found ? 0 : s.reveal }
+      return { x: p.x, y: p.y, radius: (config.FORMATION_RADIUS * this.world.short) / regionScale(p.region), reveal: s.found ? 0 : s.reveal }
     })
     const bias = this.physics.helpBias
     const nearest = bias > 0 ? this.places.nearestUnfound({ x: this.camera.x, y: this.camera.y }) : null
     const help = nearest ? { x: nearest.x, y: nearest.y, bias, boost: config.GRAIN_HELP_BOOST * this.help } : null
     const now = performance.now()
     if (now - this.dipStart < config.STAMP_DIP_MS + 50) this.wake()
+    const scale = this.camera.scale
     this.ink.render(
-      { x: this.camera.left, y: this.camera.top + this.dip(now), w: this.camera.viewW, h: this.camera.viewH },
+      { x: this.camera.left, y: this.camera.top + this.dip(now) / scale, w: this.camera.worldW, h: this.camera.worldH },
       this.revealAll && this.open <= 0 ? 1 : this.open,
       placeUniforms,
       this.clears,
       help,
+      // The time wraps with the smoke's cycle so mediump floats keep their precision.
+      { scale, timeS: (now / 1000) % 12.5 },
     )
   }
 
   /** The camera rect in world px, widened so neighbouring regions keep simulating near a threshold. */
   private viewRect(): Rect {
-    const margin = this.camera.viewH * 0.5
-    return { x: this.camera.left, y: this.camera.top - margin, w: this.camera.viewW, h: this.camera.viewH + 2 * margin }
+    const margin = this.camera.worldH * 0.5
+    return { x: this.camera.left, y: this.camera.top - margin, w: this.camera.worldW, h: this.camera.worldH + 2 * margin }
+  }
+
+  private lastScale = -1
+
+  /** Whether any of Cielo is on screen. */
+  private cieloInView(): boolean {
+    const cielo = this.world.regions.find((r) => r.id === 'cielo')
+    return !!cielo && this.camera.top < cielo.rect.y + cielo.rect.h
   }
 
   /** The linear path at the exit: step the Return without stillness. */

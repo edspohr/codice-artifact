@@ -1,4 +1,6 @@
 import type { Fragment, MovementId } from '../content/canon'
+import type { Hold } from './holds'
+import type { Stream } from './wind'
 
 export interface Vec2 {
   x: number
@@ -50,6 +52,12 @@ export interface World {
   thresholds: Threshold[]
   /** Viewport short side used to scale distances. */
   short: number
+  /** The viewport the world was built for (px). A "screen" is one viewport at view scale 1. */
+  viewW: number
+  viewH: number
+  /** Cordillera's holds and Cielo's air, seeded per cycle like the places. */
+  holds: Hold[]
+  wind: Stream[]
   /** Where the visitor starts (camera centre). */
   start: Vec2
   cycle: number

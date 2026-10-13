@@ -4,6 +4,9 @@
 import { canon, type MovementId } from '../content/canon'
 import { config } from '../gestures/config'
 import { placePlaces } from './geography'
+import { buildHolds } from './holds'
+import { regionScale } from './scale'
+import { buildWind } from './wind'
 import type { Place, Rect, Region, Threshold, World } from './types'
 
 const ORDER: MovementId[] = ['mar', 'tierra', 'cordillera', 'cielo']
@@ -21,13 +24,32 @@ function screensOf(id: MovementId): number {
   }
 }
 
+function widthOf(id: MovementId): number {
+  switch (id) {
+    case 'mar':
+      return config.MAR_SCREENS_W
+    case 'tierra':
+      return config.TIERRA_SCREENS_W
+    case 'cordillera':
+      return config.CORDILLERA_SCREENS_W
+    case 'cielo':
+      return config.CIELO_SCREENS_W
+  }
+}
+
 export function buildWorld(viewportW: number, viewportH: number, cycle: number): World {
-  // The channel is measured in portrait "screens": on a phone the viewport itself,
-  // on a wide screen a portrait unit fitted to the viewport height. The world is
-  // never narrower than the viewport, so ink always covers the whole view.
+  // The territory is measured in portrait "screens": on a phone the viewport itself,
+  // on a wide screen a portrait unit fitted to the viewport height. A region is never
+  // narrower than the view it is seen with, so ink always covers the whole view.
+  // Regions share a centre line: Mar and Tierra are channels, Cordillera and Cielo open wide.
   const unitW = Math.min(viewportW, Math.round(viewportH * 0.5))
   const short = Math.min(unitW, viewportH)
-  const width = Math.max(Math.round(unitW * config.MAR_SCREENS_W), Math.round(viewportW * config.WORLD_MIN_VIEW_WIDTHS))
+  // An open region stays open on a wide screen too: at least OPEN_MIN_VIEW_WIDTHS views wide.
+  const widths = ORDER.map((id) => {
+    const views = id === 'cordillera' || id === 'cielo' ? Math.max(config.WORLD_MIN_VIEW_WIDTHS, config.OPEN_MIN_VIEW_WIDTHS) : config.WORLD_MIN_VIEW_WIDTHS
+    return Math.max(Math.round(unitW * widthOf(id)), Math.round((viewportW * views) / regionScale(id)))
+  })
+  const width = Math.max(...widths)
 
   // Stack from the top down so y grows downward: Cielo first.
   const heights = ORDER.map((id) => Math.round(viewportH * screensOf(id)))
@@ -36,8 +58,9 @@ export function buildWorld(viewportW: number, viewportH: number, cycle: number):
   let y = height
   ORDER.forEach((id, i) => {
     const h = heights[i] as number
+    const w = widths[i] as number
     y -= h
-    regions.push({ id, rect: { x: 0, y, w: width, h } })
+    regions.push({ id, rect: { x: Math.round((width - w) / 2), y, w, h } })
   })
 
   const places: Place[] = []
@@ -53,6 +76,7 @@ export function buildWorld(viewportW: number, viewportH: number, cycle: number):
         short,
         viewH: viewportH,
         viewW: viewportW,
+        scale: regionScale(region.id),
       }),
     )
   }
@@ -73,10 +97,17 @@ export function buildWorld(viewportW: number, viewportH: number, cycle: number):
   }
 
   const mar = regions.find((r) => r.id === 'mar')!.rect
+  const view = { short, viewW: viewportW, viewH: viewportH }
+  const holds = buildHolds({ cycle, rect: regions.find((r) => r.id === 'cordillera')!.rect, places, ...view })
+  const wind = buildWind({ cycle, rect: regions.find((r) => r.id === 'cielo')!.rect, places, ...view })
   return {
+    holds,
+    wind,
     width,
     height,
     short,
+    viewW: viewportW,
+    viewH: viewportH,
     cycle,
     regions,
     places,

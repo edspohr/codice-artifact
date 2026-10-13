@@ -123,8 +123,9 @@ async function render(file, register, seed, t) {
 // formation is a place's local ink with an irregular, soft mask: never a
 // radial blob, never a rectangle.
 
-const GROUND_W = 640
-const GROUND_H = 2560 // a channel, 1:4
+const GROUND_H = 2560
+// Mar and Tierra are channels; Cordillera and Cielo open about twice as wide (see TIERRA/CORDILLERA/CIELO_SCREENS_W).
+const GROUND_W = { mar: 640, tierra: 640, cordillera: 1280, cielo: 1280 }
 const FORM_SIZE = 512
 
 // Fine, hard speckle for granulation.
@@ -179,36 +180,36 @@ const grounds = {
     d += grain
     return Math.max(0, Math.min(1, d))
   },
-  // Cordillera: mineral mass, middle-high, medium density, facets with hard
-  // edges and a closed scar; an immense void above. Lighter than Tierra.
+  // Cordillera: an open massif. Crags of mineral ink with hard facets, denser low and
+  // lighter toward the summit, and air between them, where the far ranges show. No banks:
+  // it is not a channel. (u runs over a region twice as wide as a channel: wf = 2.)
   cordillera(u, v, seed, px, py) {
-    const side = Math.abs(u - 0.5) * 2
-    const gradient = 0.06 + 0.38 * v
-    const bank = 1 - 0.5 * smoothstep(0.5, 1.0, side)
-    const mass = smoothstep(0.1, 0.5, v)
-    // Facets: cellular-looking hard steps from quantised warped noise.
-    const warp = fbm(u * 3, v * 9, seed + 2, 3, 0.5)
-    const facetField = fbm(u * 4 + warp, v * 13 + warp, seed + 6, 2, 0.5)
+    const wf = 2
+    const gradient = 0.08 + 0.4 * v
+    const warp = fbm(u * 3 * wf, v * 9, seed + 2, 3, 0.5)
+    const cragField = fbm(u * 2.2 * wf + warp * 0.8, v * 7 + warp, seed + 31, 4, 0.55)
+    const crag = smoothstep(0.47, 0.5, cragField + 0.08 * (v - 0.5))
+    const facetField = fbm(u * 4 * wf + warp, v * 13 + warp, seed + 6, 2, 0.5)
     const facet = Math.floor(facetField * 5) / 5
-    const edgeField = Math.abs(fbm(u * 4 + warp, v * 13 + warp, seed + 6, 2, 0.5) * 5 - Math.round(facetField * 5))
-    const edge = 1 - (1 - smoothstep(0.01, 0.03, edgeField)) * 0.22
-    const scar = 1 - 0.5 * Math.exp(-Math.pow((u - 0.5 - 0.12 * fbm(v * 5, 0, seed + 13, 3, 0.5)) * 16, 2)) * smoothstep(0.25, 0.8, v)
+    const edgeField = Math.abs(facetField * 5 - Math.round(facetField * 5))
+    const edge = 1 - (1 - smoothstep(0.01, 0.03, edgeField)) * 0.25
+    const streak = smoothstep(0.62, 0.74, fbm(u * 60 * wf, v * 4, seed + 9, 3, 0.6)) * 0.18
     const grain = (speckle(px, py, seed + 17) - 0.5) * 0.08
-    let d = (gradient + 0.34 * mass * (0.3 + 0.7 * facet)) * bank * scar * edge
-    d = Math.max(d, gradient * 0.6 * bank)
+    const rock = (0.18 + gradient + 0.3 * facet) * edge * (1 - streak)
+    const air = 0.03 + 0.05 * v
+    let d = air + (rock - air) * crag
     d += grain
     return Math.max(0, Math.min(1, d))
   },
-  // Cielo: smoke taking off, near-white. Minimum density, a cosmic tear.
+  // Cielo: smoke taking off, near-white, open on every side. Minimum density, a cosmic tear.
   cielo(u, v, seed, px, py) {
-    const side = Math.abs(u - 0.5) * 2
+    const wf = 2
     const gradient = 0.02 + 0.2 * v
-    const bank = 1 - 0.4 * smoothstep(0.5, 1.0, side)
-    const wisp = fbm(u * 7, v * 2.2, seed + 4, 5, 0.62) // stretched upward
-    const tear = smoothstep(0.49, 0.51, fbm(u * 1.5, v * 9, seed + 21, 3, 0.5)) * 0.06
+    const wisp = fbm(u * 7 * wf, v * 2.2, seed + 4, 5, 0.62) // stretched upward
+    const tear = smoothstep(0.49, 0.51, fbm(u * 1.5 * wf, v * 9, seed + 21, 3, 0.5)) * 0.06
     const grain = (speckle(px, py, seed + 19) - 0.5) * 0.05
-    let d = (gradient * (0.6 + 0.8 * Math.pow(wisp, 1.6)) + tear) * bank
-    d = Math.max(d, gradient * 0.7 * bank)
+    let d = gradient * (0.6 + 0.8 * Math.pow(wisp, 1.6)) + tear
+    d = Math.max(d, gradient * 0.7)
     d += grain
     return Math.max(0, Math.min(1, d))
   },
@@ -234,16 +235,25 @@ function formation(register, u, v, seed, t) {
 }
 
 async function renderGround(file, register, seed) {
-  const buf = Buffer.alloc(GROUND_W * GROUND_H)
+  const W = GROUND_W[register]
+  const buf = Buffer.alloc(W * GROUND_H)
   for (let y = 0; y < GROUND_H; y++) {
     const v = y / GROUND_H
-    for (let x = 0; x < GROUND_W; x++) {
-      const u = x / GROUND_W
+    for (let x = 0; x < W; x++) {
+      const u = x / W
       const ink = Math.max(0, Math.min(1, grounds[register](u, v, seed, x, y)))
-      buf[y * GROUND_W + x] = Math.round(255 * (1 - 0.97 * ink))
+      buf[y * W + x] = Math.round(255 * (1 - 0.97 * ink))
     }
   }
-  await sharp(buf, { raw: { width: GROUND_W, height: GROUND_H, channels: 1 } }).webp({ quality: 70, effort: 4 }).toFile(file)
+  await sharp(buf, { raw: { width: W, height: GROUND_H, channels: 1 } }).webp({ quality: 70, effort: 4 }).toFile(file)
+}
+
+/** A ground whose size no longer matches (the territory changed shape) is rendered again. */
+async function stale(file, register) {
+  if (!existsSync(file)) return true
+  if (!register) return false
+  const meta = await sharp(file).metadata()
+  return meta.width !== GROUND_W[register] || meta.height !== GROUND_H
 }
 
 async function renderFormation(file, register, seed, t) {
@@ -265,7 +275,7 @@ async function main() {
   const terrainJobs = []
   for (const m of canon.movements) {
     if (!grounds[m.id]) continue
-    terrainJobs.push({ file: resolve(outDir, `terrain/ground-${m.id}.webp`), run: (f) => renderGround(f, m.id, movementSeeds[m.id] + 500) })
+    terrainJobs.push({ file: resolve(outDir, `terrain/ground-${m.id}.webp`), register: m.id, run: (f) => renderGround(f, m.id, movementSeeds[m.id] + 500) })
   }
   for (const f of canon.fragments) {
     const m = canon.movements.find((x) => x.id === f.movement)
@@ -273,7 +283,8 @@ async function main() {
     const t = m.fragments.length > 1 ? i / (m.fragments.length - 1) : 0.5
     terrainJobs.push({ file: resolve(outDir, `terrain/formation-${f.n}.webp`), run: (file) => renderFormation(file, f.movement, movementSeeds[f.movement] + 2000 + f.n, t) })
   }
-  const pendingTerrain = force ? terrainJobs : terrainJobs.filter((j) => !existsSync(j.file))
+  const pendingTerrain = []
+  for (const j of terrainJobs) if (force || (await stale(j.file, j.register))) pendingTerrain.push(j)
   if (pendingTerrain.length) {
     const started = Date.now()
     for (const job of pendingTerrain) await job.run(job.file)

@@ -405,7 +405,8 @@ test.describe('territory: touch', () => {
   })
 
   test('in Cielo the invoked help shows as strands in the light ground', async ({ page }) => {
-    await page.goto(`${BASE}&cfg.MAR_CURRENT_SPEED=0`)
+    // Still air and no smoke: only the help may change the ground.
+    await page.goto(`${BASE}&cfg.MAR_CURRENT_SPEED=0&cfg.CIELO_SMOKE_STRENGTH=0&cfg.CIELO_WIND_SPEED=0&cfg.CIELO_THERMAL_SPEED=0`)
     await ready(page)
     await enter(page)
     await page.evaluate(() => {
@@ -413,17 +414,23 @@ test.describe('territory: touch', () => {
       // The point of Cielo farthest from every place: the strands fade near places by design.
       const cielo = t.world.regions.find((r) => r.id === 'cielo')!.rect
       const ps = t.world.places.filter((p) => p.n >= 17)
-      let best = cielo.y + cielo.h / 2
+      // Places scatter over Cielo's width: search both axes, over the points the camera can reach.
+      let best = { x: cielo.x + cielo.w / 2, y: cielo.y + cielo.h / 2 }
       let bestD = -1
       for (let y = cielo.y + 500; y < cielo.y + cielo.h - 500; y += 20) {
-        const d = Math.min(...ps.map((p) => Math.abs(p.y - y)))
-        if (d > bestD) {
-          bestD = d
-          best = y
+        for (let x = cielo.x; x <= cielo.x + cielo.w; x += 20) {
+          t.camera.x = x
+          t.camera.y = y
+          t.camera.clamp()
+          const d = Math.min(...ps.map((p) => Math.hypot(p.x - t.camera.x, p.y - t.camera.y)))
+          if (d > bestD) {
+            bestD = d
+            best = { x: t.camera.x, y: t.camera.y }
+          }
         }
       }
-      t.camera.x = cielo.x + cielo.w / 2
-      t.camera.y = best
+      t.camera.x = best.x
+      t.camera.y = best.y
       t.camera.clamp()
       t.glideTo({ x: t.camera.x, y: t.camera.y })
     })
@@ -722,5 +729,81 @@ test.describe('territory: touch', () => {
     await page.evaluate(farFrom3)
     await page.waitForTimeout(1500)
     await expect(page.locator('.place[data-n="3"]')).toHaveAttribute('data-state', 'found')
+  })
+
+  test('Cordillera: a touch on a hold grips and a pull lifts; off a hold the visitor slips back', async ({ page, viewport }) => {
+    await page.goto(`${BASE}&cfg.TITLE_IN_MS=0&cfg.TITLE_HOLD_MS=0&cfg.TITLE_OUT_MS=0`)
+    await ready(page)
+    await enter(page)
+    await expect(page.locator('.region-title')).toHaveCount(0, { timeout: 6000 })
+    const w = viewport!.width
+    const h = viewport!.height
+    // Hang below a hold, off any ledge, with room above.
+    const hold = await page.evaluate(
+      ([w, h]) => {
+        const t = window.__codice!.territory!.territory
+        const c = t.camera
+        for (const hd of t.world.holds) {
+          c.x = hd.x
+          c.y = hd.y + (h * 0.18) / 0.8
+          c.clamp()
+          const at = c.toScreen(hd.x, hd.y)
+          if (at.x < 60 || at.x > w - 60 || at.y < h * 0.15 || at.y > h * 0.45) continue
+          if (t.physics.onLedge()) continue
+          t.glideTo({ x: c.x, y: c.y }, () => t.rest())
+          return { x: at.x, y: at.y, y0: c.y }
+        }
+        return null
+      },
+      [w, h] as const,
+    )
+    expect(hold).not.toBeNull()
+    await expect.poll(() => page.evaluate(() => window.__codice!.territory!.territory.isResting()), { timeout: 5000 }).toBe(true)
+    const s = await cdp(page)
+    await swipe(s, { x: hold!.x, y: hold!.y }, { x: hold!.x, y: hold!.y + h * 0.35 }, 30, 16)
+    await page.waitForTimeout(400)
+    const afterPull = await cameraOf(page)
+    expect(hold!.y0 - afterPull.y).toBeGreaterThan((h * 0.35 * 0.5) / 0.8)
+    // Bare rock: find a spot with no hold near, pull, let go: the visitor slips back.
+    const bare = await page.evaluate(
+      ([w, h]) => {
+        const t = window.__codice!.territory!.territory
+        const c = t.camera
+        for (let sy = h * 0.2; sy < h * 0.5; sy += 20) {
+          for (let sx = 60; sx < w - 60; sx += 20) {
+            const far = t.world.holds.every((hd) => {
+              const at = c.toScreen(hd.x, hd.y)
+              return Math.hypot(at.x - sx, at.y - sy) > 90
+            })
+            if (far) return { x: sx, y: sy }
+          }
+        }
+        return null
+      },
+      [w, h] as const,
+    )
+    expect(bare).not.toBeNull()
+    await swipe(s, bare!, { x: bare!.x, y: bare!.y + h * 0.3 }, 20, 16)
+    await page.waitForTimeout(1200)
+    const afterSlip = await cameraOf(page)
+    expect(Math.abs(afterSlip.y - afterPull.y)).toBeLessThan(3)
+  })
+
+  test('Cielo: the air carries the visitor to the exit, 22 is found without the keyboard', async ({ page }) => {
+    // Faster air so the crossing fits a test; no calm, so the text does not hold the visitor.
+    await page.goto(
+      `${BASE}&cfg.TITLE_IN_MS=0&cfg.TITLE_HOLD_MS=0&cfg.TITLE_OUT_MS=0&cfg.CIELO_WIND_SPEED=700&cfg.CIELO_THERMAL_SPEED=600&cfg.CIELO_WIND_ADOPT=6&cfg.CIELO_WIND_NEAR_PLACE=1`,
+    )
+    await ready(page)
+    await enter(page)
+    await expect(page.locator('.region-title')).toHaveCount(0, { timeout: 6000 })
+    await page.evaluate(() => {
+      const t = window.__codice!.territory!.territory
+      const start = t.world.wind[0]!.pts[0]!
+      t.glideTo(start, () => t.physics.secure())
+    })
+    await expect(page.locator('.place[data-n="22"]')).toHaveAttribute('data-state', 'found', { timeout: 40_000 })
+    await expect.poll(() => page.evaluate(() => window.__codice!.territory!.territory.isResting()), { timeout: 8000 }).toBe(true)
+    await expect(page.locator('.exit-tally')).toHaveCount(1)
   })
 })
