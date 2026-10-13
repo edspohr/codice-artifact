@@ -1,0 +1,8 @@
+# Cloud Build installs with a recent pnpm that refuses unapproved install scripts.
+# Neither of these is needed at runtime on the server: decline them explicitly.
+allowBuilds:
+  '@firebase/util': false
+  protobufjs: false
+ignoredBuiltDependencies:
+  - '@firebase/util'
+  - protobufjs

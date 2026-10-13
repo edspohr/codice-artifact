@@ -25,7 +25,7 @@ async function currentCycle(): Promise<number> {
   })
 }
 
-export const patinaDelta = onCall({ enforceAppCheck: !EMULATED, consumeAppCheckToken: false, cors: true }, async (request) => {
+export const patinaDelta = onCall({ enforceAppCheck: !EMULATED, consumeAppCheckToken: false, cors: true, invoker: 'public' }, async (request) => {
   let delta
   try {
     delta = validateDelta(request.data)
