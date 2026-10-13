@@ -8,7 +8,7 @@
 
 export const REGIONS = ['mar', 'tierra', 'cordillera', 'cielo'] as const
 export type RegionId = (typeof REGIONS)[number]
-export const COLS = 8
+export const COLS = 16
 export const ROWS = 64
 export const CELLS = COLS * ROWS
 

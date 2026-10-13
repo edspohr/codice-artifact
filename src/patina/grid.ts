@@ -4,7 +4,7 @@
 import type { MovementId } from '../content/canon'
 import type { Rect } from '../world/types'
 
-export const COLS = 8
+export const COLS = 16
 export const ROWS = 64
 export const CELLS = COLS * ROWS
 export const REGIONS: MovementId[] = ['mar', 'tierra', 'cordillera', 'cielo']
