@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { canon } from '../src/content/canon'
 import { config, resetConfig } from '../src/gestures/config'
 import { placePlaces } from '../src/world/geography'
+import { Camera } from '../src/world/camera'
 import { buildWorld, regionAt } from '../src/world/world'
 
 beforeEach(() => resetConfig())
@@ -111,6 +112,29 @@ describe('geography', () => {
     expect(w.start).toEqual({ x: 273, y: w.height - 422 })
     expect(regionAt(w, w.start.y).id).toBe('mar')
     expect(regionAt(w, 10).id).toBe('cielo')
+  })
+
+  it('every place can be reached by the viewpoint: arrival distance from the clamped camera', () => {
+    for (const [w, h] of [
+      [390, 844],
+      [360, 740],
+      [430, 932],
+      [1280, 800],
+      [1920, 1080],
+    ] as const) {
+      for (const cycle of [1, 2, 3, 7, 42]) {
+        const world = buildWorld(w, h, cycle)
+        const camera = new Camera(world)
+        camera.setViewport(w, h)
+        for (const p of world.places) {
+          camera.x = p.x
+          camera.y = p.y
+          camera.clamp()
+          const d = Math.hypot(camera.x - p.x, camera.y - p.y)
+          expect(d, `place ${p.n} on ${w}x${h}, cycle ${cycle}`).toBeLessThan(config.ARRIVE_DISTANCE * world.short * 0.5)
+        }
+      }
+    }
   })
 
   it('on a wide screen the world is never narrower than the viewport and places still fit the text block', () => {

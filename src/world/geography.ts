@@ -36,16 +36,21 @@ export function placePlaces(input: GeographyInput): Place[] {
   // inside the channel with a margin, so the viewpoint can frame it on arrival.
   const textHalf = Math.min(240, 0.37 * viewW)
   const fitMargin = textHalf + 40
-  const minX = rect.x + fitMargin
-  const maxX = rect.x + rect.w - fitMargin
+  // And the viewpoint must be able to centre on it: on a wide screen the channel is barely wider than the view.
+  const minX = rect.x + Math.max(fitMargin, Math.min(rect.w / 2, viewW / 2))
+  const maxX = rect.x + rect.w - Math.max(fitMargin, Math.min(rect.w / 2, viewW / 2))
   const count = fragments.length
   // Slots along the ascent: the first about one screen above the start
   // (the start sits half a screen above the region's bottom), the last
   // near the top. The exit (22) always takes the very top.
   const bottomSlot = rect.y + rect.h - viewH / 2 - config.FIRST_PLACE_SCREENS * viewH
   // The last place of a region stays at least a screen below the closing at its threshold;
-  // the exit (22) has no threshold above it and takes the very top.
-  const topSlot = inner.y + (fragments.some((f) => f.n === 22) ? short * 0.15 : Math.max(short * 0.15, viewH * 1.05 - margin))
+  // the exit (22) has no threshold above it and takes the very top, but never above the
+  // highest point the viewpoint can reach (half a screen below the top of the world).
+  const hasExit = fragments.some((f) => f.n === 22)
+  const topSlot = hasExit
+    ? Math.max(inner.y, rect.y + viewH / 2 + short * 0.08)
+    : inner.y + Math.max(short * 0.15, viewH * 1.05 - margin)
   const span = Math.max(0, bottomSlot - topSlot)
   const step = count > 1 ? span / (count - 1) : 0
   // Places are spread along the ascent by their slots; the minimum distance never asks for more than the slots allow.
@@ -59,7 +64,9 @@ export function placePlaces(input: GeographyInput): Place[] {
     let best: { x: number; y: number } | null = null
     for (let attempt = 0; attempt < 48 && !best; attempt++) {
       const relax = attempt / 48
-      const jitterY = (random() - 0.5) * 2 * config.PLACE_JITTER * viewH * (1 - relax)
+      const jitter = (random() - 0.5) * 2 * config.PLACE_JITTER * viewH * (1 - relax)
+      // The exit only ever moves down from its slot: above it the viewpoint could not reach it.
+      const jitterY = isExit ? Math.abs(jitter) : jitter
       const lateral = (config.PLACE_LATERAL + (random() - 0.5) * 2 * config.PLACE_LATERAL_JITTER) * halfW
       const x = Math.min(Math.min(inner.x + inner.w, maxX), Math.max(Math.max(inner.x, minX), centreX + side * lateral))
       const y = Math.min(inner.y + inner.h, Math.max(inner.y, slotY + jitterY))
