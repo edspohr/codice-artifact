@@ -278,6 +278,8 @@ export const defaultConfig = {
   CIELO_FADE_MS: 5000,
   /** A touch during the dissolution restores the place over this time (ms). */
   RESTORE_MS: 600,
+  /** Cielo closes alone on the white, title and tally, for this long before the reprise (ms). */
+  CIELO_CLOSING_MS: 6000,
   /** The Return: reprise shown for this long before the lone seal (ms). */
   REPRISE_MS: 7000,
 

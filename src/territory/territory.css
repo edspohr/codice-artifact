@@ -542,15 +542,14 @@
 
 /* --- the exit's tally, beside fragment 22 ------------------------------------------- */
 
+.return--closing {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
 .exit-tally {
-  /* Cielo's closing, inside the exit's place block: under the text and its seal, centred on the text. */
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  width: max-content;
-  max-width: calc(100vw - 2 * var(--gutter));
-  margin-top: calc(0.8rem + var(--seal-size) * 3.3 + 1.6rem);
-  transform: translateX(-50%);
+  /* Cielo's closing, alone on the white after the dissolution. */
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -611,6 +610,7 @@
   font-size: 0.85rem;
 }
 .territory[data-exit='dissolving'] .world-text,
+.territory[data-exit='closing'] .world-text,
 .territory[data-exit='reprise'] .world-text,
 .territory[data-exit='seal'] .world-text,
 .territory[data-exit='colofon'] .world-text {

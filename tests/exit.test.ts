@@ -11,12 +11,13 @@ function make() {
 }
 
 describe('the exit and the Return', () => {
-  it('dwell by words, then stillness, then the dissolution whitens and the reprise follows', () => {
+  it('dwell by words, then stillness, then the dissolution whitens, Cielo closes alone, and the reprise follows', () => {
     setConfig('CIELO_DWELL_BASE_MS', 1000)
     setConfig('CIELO_DWELL_PER_WORD_MS', 50)
     setConfig('CIELO_STILL_MS', 500)
     setConfig('CIELO_FADE_MS', 1000)
     setConfig('REPRISE_MS', 2000)
+    setConfig('CIELO_CLOSING_MS', 1500)
     const { exit } = make()
     exit.arrive(0, 40) // dwell = 3000
     exit.tick(2999, false, false)
@@ -26,9 +27,13 @@ describe('the exit and the Return', () => {
     exit.tick(3501, false, false)
     expect(exit.whiteness).toBeCloseTo(0.5, 1)
     exit.tick(4001, false, false)
-    expect(exit.current).toBe('reprise')
+    expect(exit.current).toBe('closing')
     expect(exit.whiteness).toBe(1)
-    exit.tick(6002, false, false)
+    exit.tick(5000, false, false)
+    expect(exit.current).toBe('closing')
+    exit.tick(5502, false, false)
+    expect(exit.current).toBe('reprise')
+    exit.tick(7503, false, false)
     expect(exit.current).toBe('seal')
     exit.openColofon()
     expect(exit.current).toBe('colofon')
@@ -73,8 +78,12 @@ describe('the exit and the Return', () => {
     exit.advance(10_000)
     expect(exit.current).toBe('dissolving')
     exit.advance(10_100)
-    expect(exit.current).toBe('reprise')
+    expect(exit.current).toBe('closing')
     expect(exit.whiteness).toBe(1)
+    exit.tick(60_000, false, true)
+    expect(exit.current).toBe('closing') // the closing waits for the keyboard user
+    exit.advance(60_000)
+    expect(exit.current).toBe('reprise')
     exit.tick(60_000, false, true)
     expect(exit.current).toBe('reprise') // the reprise waits for the keyboard user
     exit.advance(60_000)

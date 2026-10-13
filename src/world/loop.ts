@@ -540,14 +540,13 @@ export class Territory {
     const el = this.els.stage.querySelector<HTMLElement>(`.place[data-n="${n}"]`)
     const seal = el?.querySelector<HTMLElement>('.place__seal')
     const text = el?.querySelector<HTMLElement>('[data-canon="fragment"]')
-    const exitTally = n === 22 ? this.els.stage.querySelector<HTMLElement>('.exit-tally') : null
-    if (!el || !text || (!seal && this.settleTries < 12) || (n === 22 && !exitTally && this.settleTries < 12)) {
+    if (!el || !text || (!seal && this.settleTries < 12)) {
       this.settleTries++
       return
     }
     this.pendingSettle = null
     const stage = this.els.stage.getBoundingClientRect()
-    const rects = [text.getBoundingClientRect(), ...(seal ? [seal.getBoundingClientRect()] : []), ...(exitTally ? [exitTally.getBoundingClientRect()] : [])]
+    const rects = [text.getBoundingClientRect(), ...(seal ? [seal.getBoundingClientRect()] : [])]
     const left = Math.min(...rects.map((r) => r.left)) - stage.left
     const right = Math.max(...rects.map((r) => r.right)) - stage.left
     const top = Math.min(...rects.map((r) => r.top)) - stage.top

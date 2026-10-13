@@ -10,7 +10,7 @@ export type Stop =
   | { kind: 'epigraph' }
   | { kind: 'place'; n: number }
   | { kind: 'threshold'; index: number }
-  | { kind: 'return'; stage: 'dissolution' | 'reprise' | 'seal' | 'colofon' }
+  | { kind: 'return'; stage: 'dissolution' | 'closing' | 'reprise' | 'seal' | 'colofon' }
 
 /** Cover, epigraph, then every place in canonical order with each region's threshold after its last place. */
 export function stopsFor(t: Territory): Stop[] {
@@ -22,7 +22,7 @@ export function stopsFor(t: Territory): Stop[] {
     if (th >= 0) stops.push({ kind: 'threshold', index: th })
   }
   // After the exit: the Return, step by step. There is no way back past the dissolution.
-  stops.push({ kind: 'return', stage: 'dissolution' }, { kind: 'return', stage: 'reprise' }, { kind: 'return', stage: 'seal' }, { kind: 'return', stage: 'colofon' })
+  stops.push({ kind: 'return', stage: 'dissolution' }, { kind: 'return', stage: 'closing' }, { kind: 'return', stage: 'reprise' }, { kind: 'return', stage: 'seal' }, { kind: 'return', stage: 'colofon' })
   return stops
 }
 

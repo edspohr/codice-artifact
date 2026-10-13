@@ -11,7 +11,6 @@ import { cssColor, loadAssets } from './assets'
 import { Controls } from './Controls'
 import { PlaceText } from './PlaceText'
 import { Cover } from './Cover'
-import { ExitTally } from './ExitTally'
 import { RegionTitle } from './RegionTitle'
 import { Return } from './Return'
 import { ThresholdMark } from './ThresholdMark'
@@ -127,11 +126,7 @@ export default function TerritoryApp({
           ? world.places.map((p) => {
               const s = snap.places[p.n]
               if (!s || s.state === 'hidden') return null
-              return (
-                <PlaceText key={p.n} place={p} status={s}>
-                  {p.n === 22 ? <ExitTally world={world} exit={p} found={found} /> : null}
-                </PlaceText>
-              )
+              return <PlaceText key={p.n} place={p} status={s} />
             })
           : null}
         {world ? world.thresholds.map((th) => <ThresholdMark key={th.from} threshold={th} found={found} />) : null}
@@ -140,7 +135,7 @@ export default function TerritoryApp({
         <CanonLines lines={canon.epigraph} />
       </div>
       {snap.phase === 'cover' || !coverGone ? <Cover dismissed={snap.phase !== 'cover'} /> : null}
-      <Return stage={snap.exit.stage} onSeal={() => handlesRef.current?.territory.exit.openColofon()} />
+      <Return stage={snap.exit.stage} world={world} found={found} onSeal={() => handlesRef.current?.territory.exit.openColofon()} />
     </main>
   )
 }

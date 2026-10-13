@@ -84,8 +84,8 @@ Decided with the author: in Tierra, fracture lines across the channel close the 
 
 ### 3.6 The exit and the Return
 
-- **Fragment 22 (seal 0) is the exit, and the last place of Cielo.** It sits at the far top of Cielo, alone in its view, and Cielo closes there like every region: beneath its text and seal, Cielo's title with its tally of 17 to 22, the 0 included (decided by the author after the 3b walk). After the reading dwell, sustained stillness begins the dissolution; a touch during it cancels and restores the place.
-- The dissolution is the only point of no return: everything the visitor left dissolves and the territory whitens. Then the reprise in italics, then the seal alone with **no numeral** on near-white. Touching it opens the Colofón.
+- **Fragment 22 (seal 0) is the exit, and the last place of Cielo.** It sits at the far top of Cielo, alone in its view. Cielo closes like every region, but alone: after the dissolution, on the white, Cielo's title with its tally of 17 to 22, the 0 included, before the reprise (decided by the author after the 3b walk). After the reading dwell, sustained stillness begins the dissolution; a touch during it cancels and restores the place.
+- The dissolution is the only point of no return: everything the visitor left dissolves and the territory whitens. Then Cielo's closing alone, then the reprise in italics, then the seal alone with **no numeral** on near-white. Touching it opens the Colofón.
 - A visitor who leaves and comes back starts again.
 
 ### 3.7 Handling the ink

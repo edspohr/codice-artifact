@@ -243,7 +243,14 @@ test.describe('territory: entry and the linear path', () => {
     await expect(place).toHaveAttribute('data-state', 'found', { timeout: 15_000 })
     await expect(place.locator('.place__seal [data-seal]')).toHaveText('0', { timeout: 8000 })
     expect(await page.locator('.territory').getAttribute('data-region')).toBe('cielo')
-    // Cielo closes at the exit like every region: its title, and its tally of 17–22 with the 0 (found) included, as 2×3.
+    // The exit is read alone: Cielo's closing is not on screen with it.
+    await expect(page.locator('.exit-tally')).toHaveCount(0)
+    await expect.poll(() => page.locator('.territory').getAttribute('data-exit'), { timeout: 8000 }).toBe('dwelling')
+    await page.keyboard.press('ArrowRight') // dissolution
+    await expect(page.locator('.territory')).toHaveAttribute('data-exit', 'dissolving')
+    await page.keyboard.press('ArrowRight') // Cielo closes alone on the white
+    await expect(page.locator('.territory')).toHaveAttribute('data-exit', 'closing')
+    // Like every region: its title, and its tally of 17–22 with the 0 (found) included, as 2×3.
     await expect(page.locator('.exit-tally [data-canon="movement-title"]')).toHaveText(canon.movements.find((m) => m.id === 'cielo')!.title)
     await expect(page.locator('.exit-tally .tally__impression')).toHaveCount(6)
     await expect(page.locator('.exit-tally .tally__impression[data-n="22"][data-inked]')).toHaveCount(1)
@@ -252,9 +259,8 @@ test.describe('territory: entry and the linear path', () => {
     expect(blind + inked).toBe(6)
     const rows = await page.locator('.exit-tally .tally__impression').evaluateAll((els) => new Set(els.map((e) => Math.round(e.getBoundingClientRect().top))).size)
     expect(rows).toBe(2)
-    await expect.poll(() => page.locator('.territory').getAttribute('data-exit'), { timeout: 8000 }).toBe('dwelling')
-    await page.keyboard.press('ArrowRight') // dissolution
-    await expect(page.locator('.territory')).toHaveAttribute('data-exit', 'dissolving')
+    // Alone: the territory and its texts have whitened beneath.
+    expect(await page.evaluate(() => getComputedStyle(document.querySelector('.world-text')!).opacity)).toBe('0')
     await page.keyboard.press('ArrowRight') // reprise
     await expect(page.locator('.territory')).toHaveAttribute('data-exit', 'reprise')
     const lines = await page.locator('.return--reprise [data-canon-line]').allTextContents()
@@ -808,6 +814,5 @@ test.describe('territory: touch', () => {
     })
     await expect(page.locator('.place[data-n="22"]')).toHaveAttribute('data-state', 'found', { timeout: 40_000 })
     await expect.poll(() => page.evaluate(() => window.__codice!.territory!.territory.isResting()), { timeout: 8000 }).toBe(true)
-    await expect(page.locator('.exit-tally')).toHaveCount(1)
   })
 })

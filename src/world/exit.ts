@@ -1,12 +1,13 @@
 // The exit and the Return. Fragment 22 is the exit: after the reading
 // dwell, sustained stillness begins the dissolution; a touch during it
 // cancels and restores the place. The dissolution is the only point of no
-// return: the territory whitens, then the reprise, then the lone seal, and
+// return: the territory whitens, then Cielo closes alone (its title and its
+// tally, the 0 included), then the reprise, then the lone seal, and
 // touching it opens the Colofón. The linear path steps through the same
 // stages without stillness.
 import { cieloDwellMs, config } from '../gestures/config'
 
-export type ExitStage = 'idle' | 'dwelling' | 'dissolving' | 'reprise' | 'seal' | 'colofon'
+export type ExitStage = 'idle' | 'dwelling' | 'dissolving' | 'closing' | 'reprise' | 'seal' | 'colofon'
 
 export interface ExitSnapshot {
   stage: ExitStage
@@ -25,6 +26,7 @@ export class Exit {
   private restoreFrom = 0
   private restoreStart = 0
   private repriseStart = 0
+  private closingStart = 0
   private onChange: (s: ExitSnapshot) => void
 
   constructor(onChange: (s: ExitSnapshot) => void) {
@@ -74,6 +76,10 @@ export class Exit {
         break
       case 'dissolving':
         this.progress = 1
+        this.closingStart = now
+        this.set('closing')
+        break
+      case 'closing':
         this.repriseStart = now
         this.set('reprise')
         break
@@ -116,10 +122,17 @@ export class Exit {
       case 'dissolving': {
         this.progress = Math.min(1, (now - this.dissolveStart) / Math.max(1, config.CIELO_FADE_MS))
         if (this.progress >= 1) {
+          this.closingStart = now
+          this.set('closing')
+        }
+        return true
+      }
+      case 'closing': {
+        if (!keyboardUser && now - this.closingStart >= config.CIELO_CLOSING_MS) {
           this.repriseStart = now
           this.set('reprise')
         }
-        return true
+        return this.stage === 'closing'
       }
       case 'reprise': {
         if (!keyboardUser && now - this.repriseStart >= config.REPRISE_MS) this.set('seal')
