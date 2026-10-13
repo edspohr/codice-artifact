@@ -7,12 +7,12 @@ export function Colofon() {
   const c = copy.colofon
   return (
     <div className="colofon">
-      <p className="colofon__heading">{c.heading}</p>
+      {c.heading ? <p className="colofon__heading">{c.heading}</p> : null}
       <p>{c.made}</p>
       <p>{c.credits}</p>
       <p data-cycle={CURRENT_CYCLE}>{c.cycle.replace('{cycle}', String(CURRENT_CYCLE))}</p>
-      <p>{c.contribution}</p>
-      <p>{c.email}</p>
+      {c.contribution ? <p>{c.contribution}</p> : null}
+      {c.email ? <p>{c.email}</p> : null}
       <p>
         <a href={c.linkedinUrl} target="_blank" rel="noopener noreferrer">
           {c.linkedinLabel}

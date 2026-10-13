@@ -17,20 +17,23 @@ export const copy = {
     sealToColofon: 'Colofón',
   },
   meta: {
-    /** <meta name="description">. Not rendered until the author fills it in. */
-    description: 'TODO-AUTHOR: one-sentence description for the document head, without explaining the fragments',
+    /** <meta name="description"> (injected at build time, see vite.config.ts). DRAFT: see below. */
+    description: 'Los veintidós microrrelatos de Códice del tiempo roto, de Edmundo Spohr, en un territorio de tinta para recorrer.',
   },
+  // DRAFT copy for the Colofón and the description, proposed by the agent at the author's
+  // request (2026-10-13) as a placeholder the author will rewrite. Not final author copy.
   colofon: {
-    // Suggestion: a heading is optional; the Colofón may open with the text directly.
-    heading: 'TODO-AUTHOR: Colofón heading, or empty',
-    made: 'TODO-AUTHOR: how the artifact was made',
-    credits: 'TODO-AUTHOR: credits',
+    heading: 'Colofón',
+    made: 'El territorio es tinta: se dibuja en el navegador, se mueve con el dedo y se desgasta con cada visita. Lo que todos dejan se acumula hasta que el territorio estalla y vuelve a empezar como otro mundo. Ningún texto de esta obra fue generado por una máquina.',
+    credits: 'Textos, concepto y dirección: Edmundo Spohr. Tipografías: Archivo y Spectral.',
     /** Use {cycle} where the current cycle number goes. */
-    cycle: 'TODO-AUTHOR: sentence that states the current cycle number, with {cycle} as placeholder',
-    contribution: 'TODO-AUTHOR: free contribution line (Phase 7, link to VITE_DONATION_URL)',
-    email: 'TODO-AUTHOR: optional email line and consent text (Phase 7)',
+    cycle: 'Ciclo {cycle}.',
+    /** Phase 7: free contribution line (link to VITE_DONATION_URL). Empty: not shown. */
+    contribution: '',
+    /** Phase 7: optional email line and consent text. Empty: not shown. */
+    email: '',
     /** The author's LinkedIn: label as shown, and the URL (author-provided). */
-    linkedinLabel: 'TODO-AUTHOR: visible label for the LinkedIn link',
+    linkedinLabel: 'Edmundo Spohr en LinkedIn',
     linkedinUrl: 'https://www.linkedin.com/in/edmundo-spohr/',
   },
 } as const
