@@ -127,13 +127,14 @@ export default function TerritoryApp({
           ? world.places.map((p) => {
               const s = snap.places[p.n]
               if (!s || s.state === 'hidden') return null
-              return <PlaceText key={p.n} place={p} status={s} />
+              return (
+                <PlaceText key={p.n} place={p} status={s}>
+                  {p.n === 22 ? <ExitTally world={world} exit={p} found={found} /> : null}
+                </PlaceText>
+              )
             })
           : null}
         {world ? world.thresholds.map((th) => <ThresholdMark key={th.from} threshold={th} found={found} />) : null}
-        {world && snap.places[22]?.state !== undefined && snap.places[22]?.state !== 'hidden' && world.places.find((p) => p.n === 22) ? (
-          <ExitTally world={world} exit={world.places.find((p) => p.n === 22)!} found={found} />
-        ) : null}
       </div>
       <div className="epigraph-veil" data-canon="epigraph" data-visible={snap.phase === 'epigraph' ? '' : undefined} aria-hidden={snap.phase !== 'epigraph'}>
         <CanonLines lines={canon.epigraph} />

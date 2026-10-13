@@ -3,6 +3,7 @@ import { canon } from '../src/content/canon'
 import { config, resetConfig } from '../src/gestures/config'
 import { placePlaces } from '../src/world/geography'
 import { Camera } from '../src/world/camera'
+import { regionScale } from '../src/world/scale'
 import { buildWorld, regionAt } from '../src/world/world'
 
 beforeEach(() => resetConfig())
@@ -85,8 +86,10 @@ describe('geography', () => {
   it('stacks four channels, Mar at the bottom and Cielo at the top, with a threshold between each pair', () => {
     const w = buildWorld(VIEW_W, VIEW_H, 1)
     expect(w.regions.map((r) => r.id)).toEqual(['mar', 'tierra', 'cordillera', 'cielo'])
-    const heights = [5.5, 8, 8, 7.5].map((s) => Math.round(VIEW_H * s))
-    expect(w.height).toBe(heights.reduce((a, b) => a + b, 0))
+    // Channels have their height in screens; the open regions at least theirs (more if their places need it).
+    const heights = [5.5, 8, 9, 9].map((s) => Math.round(VIEW_H * s))
+    w.regions.forEach((r, i) => (i < 2 ? expect(r.rect.h).toBe(heights[i]) : expect(r.rect.h).toBeGreaterThanOrEqual(heights[i]!)))
+    expect(w.height).toBe(w.regions.reduce((a, r) => a + r.rect.h, 0))
     // Mar and Tierra are channels; Cordillera and Cielo open wide, all on one centre line.
     expect(w.regions.map((r) => r.rect.w)).toEqual([546, 546, 1170, 1560])
     expect(w.width).toBe(1560)
@@ -135,6 +138,29 @@ describe('geography', () => {
           camera.clamp()
           const d = Math.hypot(camera.x - p.x, camera.y - p.y)
           expect(d, `place ${p.n} on ${w}x${h}, cycle ${cycle}`).toBeLessThan(config.ARRIVE_DISTANCE * world.short * 0.5)
+        }
+      }
+    }
+  })
+
+  it('in the open regions two places never share one view, so a text is always read alone', () => {
+    for (const [w, h] of [
+      [390, 844],
+      [360, 740],
+      [430, 932],
+      [1280, 800],
+    ] as const) {
+      for (const cycle of [1, 2, 3, 7, 42]) {
+        const world = buildWorld(w, h, cycle)
+        for (const id of ['cordillera', 'cielo'] as const) {
+          const s = regionScale(id)
+          const ps = world.places.filter((p) => p.region === id)
+          for (const a of ps)
+            for (const b of ps) {
+              if (a.n >= b.n) continue
+              const together = Math.abs(a.x - b.x) < (w / s) * 0.85 && Math.abs(a.y - b.y) < (h / s) * 0.75
+              expect(together, `${id} ${a.n}/${b.n} on ${w}x${h}, cycle ${cycle}`).toBe(false)
+            }
         }
       }
     }

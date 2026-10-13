@@ -22,8 +22,8 @@ export const defaultConfig = {
   CIELO_SCREENS_W: 4,
   MAR_SCREENS_H: 5.5,
   TIERRA_SCREENS_H: 8,
-  CORDILLERA_SCREENS_H: 8,
-  CIELO_SCREENS_H: 7.5,
+  CORDILLERA_SCREENS_H: 9,
+  CIELO_SCREENS_H: 9,
   /** On wide screens the world is at least this many viewport widths, so ink covers the whole view. */
   WORLD_MIN_VIEW_WIDTHS: 1.15,
   /** Cordillera and Cielo are at least this many views wide, so a wide screen still finds them open. */

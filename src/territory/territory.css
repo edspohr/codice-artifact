@@ -46,8 +46,7 @@
 }
 
 .world-text > .place,
-.world-text > .threshold-mark,
-.world-text > .exit-tally {
+.world-text > .threshold-mark {
   left: calc(var(--wx, 0px) * var(--s));
   top: calc(var(--wy, 0px) * var(--s));
 }
@@ -205,8 +204,9 @@
 /* --- the tally ------------------------------------------------------------- */
 
 .tally {
-  display: flex;
-  flex-wrap: wrap;
+  /* Always two rows: six impressions as 2×3, four as 2×2. */
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 3), max-content);
   justify-content: center;
   gap: 0.45em;
   max-width: calc(100vw - 2 * var(--gutter));
@@ -507,7 +507,8 @@
   transform: translate(-50%, -50%);
   white-space: nowrap;
 }
-.threshold-mark .movement-title {
+.threshold-mark .movement-title,
+.exit-tally .movement-title {
   position: static;
   margin: 0;
   font-family: var(--font-title);
@@ -533,7 +534,8 @@
   font-weight: 600;
   letter-spacing: 0.14em;
 }
-.threshold-mark[data-movement='cielo'] .movement-title {
+.threshold-mark[data-movement='cielo'] .movement-title,
+.exit-tally[data-movement='cielo'] .movement-title {
   font-weight: var(--cielo-title-weight);
   letter-spacing: 0.32em;
 }
@@ -541,9 +543,19 @@
 /* --- the exit's tally, beside fragment 22 ------------------------------------------- */
 
 .exit-tally {
+  /* Cielo's closing, inside the exit's place block: under the text and its seal, centred on the text. */
   position: absolute;
-  /* Below the place's text block and its seal: the block is centred on the place. */
-  transform: translate(-50%, calc(min(30rem, 74vw) * 0.42 + 6.5rem));
+  top: 100%;
+  left: 50%;
+  width: max-content;
+  max-width: calc(100vw - 2 * var(--gutter));
+  margin-top: calc(0.8rem + var(--seal-size) * 3.3 + 1.6rem);
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.1rem;
+  white-space: nowrap;
   animation: return-in 1.4s ease-out both;
 }
 

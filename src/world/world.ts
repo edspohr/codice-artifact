@@ -3,7 +3,7 @@
 // between each pair, the places of each region, the exit at the far top.
 import { canon, type MovementId } from '../content/canon'
 import { config } from '../gestures/config'
-import { placePlaces } from './geography'
+import { minOpenHeight, placePlaces } from './geography'
 import { buildHolds } from './holds'
 import { regionScale } from './scale'
 import { buildWind } from './wind'
@@ -52,7 +52,13 @@ export function buildWorld(viewportW: number, viewportH: number, cycle: number):
   const width = Math.max(...widths)
 
   // Stack from the top down so y grows downward: Cielo first.
-  const heights = ORDER.map((id) => Math.round(viewportH * screensOf(id)))
+  // An open region also grows tall enough for its places to stay one view apart.
+  const heights = ORDER.map((id) => {
+    const h = Math.round(viewportH * screensOf(id))
+    if (id !== 'cordillera' && id !== 'cielo') return h
+    const movement = canon.movements.find((m) => m.id === id)!
+    return Math.max(h, minOpenHeight(movement.fragments.length, movement.fragments.includes(22), viewportH, regionScale(id)))
+  })
   const height = heights.reduce((a, b) => a + b, 0)
   const regions: Region[] = []
   let y = height

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { session } from '../app/session'
 import { CanonLines } from '../components/CanonLines'
 import { Seal } from '../components/Seal'
@@ -10,7 +10,7 @@ import type { Place } from '../world/types'
 // (translation and a slight rotation only, never scale) and is always
 // legible. On arrival the seal is stamped next to it, with its seeded
 // variation. The ink parts around it (data-clear).
-export function PlaceText({ place, status }: { place: Place; status: PlaceStatus }) {
+export function PlaceText({ place, status, children }: { place: Place; status: PlaceStatus; children?: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
     if (status.found && session.get().keyboardUser) ref.current?.focus({ preventScroll: true })
@@ -50,6 +50,7 @@ export function PlaceText({ place, status }: { place: Place; status: PlaceStatus
           <Seal numeral={place.fragment.seal} />
         </div>
       ) : null}
+      {children}
     </div>
   )
 }

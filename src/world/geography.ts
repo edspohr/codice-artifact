@@ -25,6 +25,18 @@ export interface GeographyInput {
   scale?: number
 }
 
+/**
+ * The least height (world px) an open region needs so its places can keep one
+ * view apart along the ascent alone (on a wide screen they cannot do it sideways).
+ */
+export function minOpenHeight(count: number, hasExit: boolean, viewportH: number, scale: number): number {
+  const v = viewportH / scale
+  const top = hasExit ? 0.6 + 1.0 : 1.05
+  const bottom = 0.5 + config.FIRST_PLACE_SCREENS
+  const others = hasExit ? count - 1 : count
+  return Math.ceil(v * (top + bottom + Math.max(0, others - 1) * 0.85 + 0.2))
+}
+
 export function placePlaces(input: GeographyInput): Place[] {
   const { cycle, region, rect, fragments, short } = input
   const scale = input.scale ?? 1
@@ -47,7 +59,6 @@ export function placePlaces(input: GeographyInput): Place[] {
   const maxX = rect.x + rect.w - Math.max(fitMargin, Math.min(rect.w / 2, viewW / 2))
   const halfW = Math.max(0, (maxX - minX) / 2)
   const open = rect.w >= viewW * 1.7
-  const count = fragments.length
   // Slots along the ascent: the first about one screen above the start
   // (the start sits half a screen above the region's bottom), the last
   // near the top. The exit (22) always takes the very top.
@@ -56,20 +67,21 @@ export function placePlaces(input: GeographyInput): Place[] {
   // the exit (22) has no threshold above it and takes the very top, but never above the
   // highest point the viewpoint can reach (half a screen below the top of the world).
   const hasExit = fragments.some((f) => f.n === 22)
-  const topSlot = hasExit
-    ? Math.max(inner.y, rect.y + viewH / 2 + (short * 0.08) / scale)
-    : inner.y + Math.max((short * 0.15) / scale, viewH * 1.05 - margin)
+  const exitSlot = Math.max(inner.y, rect.y + viewH / 2 + (short * 0.08) / scale)
+  // The others keep a view and more below the exit, so the exit is read alone.
+  const topSlot = hasExit ? exitSlot + viewH * 1.0 : inner.y + Math.max((short * 0.15) / scale, viewH * 1.05 - margin)
+  const others = fragments.filter((f) => f.n !== 22).length
   const span = Math.max(0, bottomSlot - topSlot)
-  const step = count > 1 ? span / (count - 1) : 0
+  const step = others > 1 ? span / (others - 1) : 0
   // Places are spread along the ascent by their slots; the minimum distance never asks for more than the slots allow
   // (in an open region the lateral spread adds room, so it can ask for more).
-  const minDistEff = count > 1 ? Math.min(minDist, step * (open ? 1.4 : 0.8)) : minDist
+  const minDistEff = others > 1 ? Math.min(minDist, step * (open ? 1.4 : 0.8)) : minDist
   let side = random() < 0.5 ? -1 : 1
 
   const placed: Place[] = []
   fragments.forEach((fragment, i) => {
     const isExit = fragment.n === 22
-    const slotY = isExit ? topSlot : bottomSlot - i * step
+    const slotY = isExit ? exitSlot : bottomSlot - i * step
     let best: { x: number; y: number } | null = null
     for (let attempt = 0; attempt < 48 && !best; attempt++) {
       const relax = attempt / 48
@@ -77,12 +89,16 @@ export function placePlaces(input: GeographyInput): Place[] {
       // The exit only ever moves down from its slot: above it the viewpoint could not reach it.
       const jitterY = isExit ? Math.abs(jitter) : jitter
       // A channel keeps places near its centre line; an open region scatters them over its width.
+      // (Toward the outer part of each side, so consecutive places, on alternate sides, fall in different views.)
+      if (open && attempt > 0 && attempt % 2 === 0) side = -side
       const lateral = open
-        ? (0.12 + random() * 0.88) * halfW
+        ? (0.62 + random() * 0.38) * halfW
         : (config.PLACE_LATERAL + (random() - 0.5) * 2 * config.PLACE_LATERAL_JITTER) * halfW
       const x = isExit ? centreX + (random() - 0.5) * 0.2 * halfW : Math.min(maxX, Math.max(minX, centreX + side * lateral))
       const y = Math.min(inner.y + inner.h, Math.max(inner.y, slotY + jitterY))
-      const ok = placed.every((p) => Math.hypot(p.x - x, p.y - y) >= minDistEff * (1 - relax * 0.5))
+      // In an open region the view takes in a lot: two places never share one view, so a text is always read alone.
+      const apart = (p: Place) => !open || Math.abs(p.x - x) >= viewW * 0.85 || Math.abs(p.y - y) >= viewH * 0.75
+      const ok = placed.every((p) => Math.hypot(p.x - x, p.y - y) >= minDistEff * (1 - relax * 0.5) && apart(p))
       if (ok) best = { x, y }
     }
     if (!best) throw new Error(`geography: could not place fragment ${fragment.n}`)

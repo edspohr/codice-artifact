@@ -241,13 +241,17 @@ test.describe('territory: entry and the linear path', () => {
     await ready(page)
     const place = page.locator('.place[data-n="22"]')
     await expect(place).toHaveAttribute('data-state', 'found', { timeout: 15_000 })
-    await expect(place.locator('[data-seal]')).toHaveText('0', { timeout: 8000 })
+    await expect(place.locator('.place__seal [data-seal]')).toHaveText('0', { timeout: 8000 })
     expect(await page.locator('.territory').getAttribute('data-region')).toBe('cielo')
-    // Cielo's tally sits beside the exit: one impression per fragment 17–21, blind unless passed through.
-    await expect(page.locator('.exit-tally .tally__impression')).toHaveCount(5)
+    // Cielo closes at the exit like every region: its title, and its tally of 17–22 with the 0 (found) included, as 2×3.
+    await expect(page.locator('.exit-tally [data-canon="movement-title"]')).toHaveText(canon.movements.find((m) => m.id === 'cielo')!.title)
+    await expect(page.locator('.exit-tally .tally__impression')).toHaveCount(6)
+    await expect(page.locator('.exit-tally .tally__impression[data-n="22"][data-inked]')).toHaveCount(1)
     const blind = await page.locator('.exit-tally .seal--blind').count()
     const inked = await page.locator('.exit-tally [data-inked]').count()
-    expect(blind + inked).toBe(5)
+    expect(blind + inked).toBe(6)
+    const rows = await page.locator('.exit-tally .tally__impression').evaluateAll((els) => new Set(els.map((e) => Math.round(e.getBoundingClientRect().top))).size)
+    expect(rows).toBe(2)
     await expect.poll(() => page.locator('.territory').getAttribute('data-exit'), { timeout: 8000 }).toBe('dwelling')
     await page.keyboard.press('ArrowRight') // dissolution
     await expect(page.locator('.territory')).toHaveAttribute('data-exit', 'dissolving')

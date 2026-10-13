@@ -80,11 +80,11 @@ Decided with the author: in Tierra, fracture lines across the channel close the 
 - **The closing of a region is an object.** At the threshold, anchored to the world, the region's title with the tally beneath it: the summary of what was done, and the passage. The ink parts around it.
 - **The threshold is a colossus.** A mass of ink at full expression across the band, crossed with the region's physics at their strongest (in Mar: the current at its fastest, less traction). There is no pulled-back view anywhere in the piece (the author removed the look back: it broke immersion); the DOM text is never scaled.
 - A threshold is **always passable**: the journey never requires completeness.
-- **The tally** is the only indication of progress in the whole piece. At each threshold there is one seal impression per fragment of the region being left: **inked with its numeral if the visitor found it, blind (embossed, uninked, no numeral) if not.** No numbers, no words, no bar. A visitor who wants everything sees what is missing and goes back; anyone else walks on.
+- **The tally** is the only indication of progress in the whole piece. At each threshold there is one seal impression per fragment of the region being left: **inked with its numeral if the visitor found it, blind (embossed, uninked, no numeral) if not.** No numbers, no words, no bar. A tally is always two rows, evoking the squareness of the work: six impressions as 2×3, four as 2×2. A visitor who wants everything sees what is missing and goes back; anyone else walks on.
 
 ### 3.6 The exit and the Return
 
-- **Fragment 22 (seal 0) is the exit.** It sits at the far top of Cielo with Cielo's tally beside it (impressions for 17 to 21). After the reading dwell, sustained stillness begins the dissolution; a touch during it cancels and restores the place.
+- **Fragment 22 (seal 0) is the exit, and the last place of Cielo.** It sits at the far top of Cielo, alone in its view, and Cielo closes there like every region: beneath its text and seal, Cielo's title with its tally of 17 to 22, the 0 included (decided by the author after the 3b walk). After the reading dwell, sustained stillness begins the dissolution; a touch during it cancels and restores the place.
 - The dissolution is the only point of no return: everything the visitor left dissolves and the territory whitens. Then the reprise in italics, then the seal alone with **no numeral** on near-white. Touching it opens the Colofón.
 - A visitor who leaves and comes back starts again.
 
